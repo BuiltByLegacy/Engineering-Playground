@@ -1,56 +1,142 @@
 extends Node2D
 
 var playground: FlowPlayground
-var solver: EngineeringSimulationAdapter
+var solver: FlowLbmSolver
+var visualizer: FlowVisualizer
+var editor: FlowEditor
 var running := true
 var elapsed := 0.0
 
+const TOOLBAR_HEIGHT := 82.0
+const BUTTON_W := 132.0
+const BUTTON_H := 54.0
+
+var tool_buttons := [
+	{"label": "DRAW", "tool": FlowEditor.Tool.DRAW_WALL},
+	{"label": "ERASE", "tool": FlowEditor.Tool.ERASE},
+	{"label": "PAN", "tool": FlowEditor.Tool.PAN},
+]
+
+var view_buttons := [
+	{"label": "FLOW", "mode": FlowVisualizer.ViewMode.PARTICLES},
+	{"label": "SPEED", "mode": FlowVisualizer.ViewMode.VELOCITY},
+	{"label": "PRESS", "mode": FlowVisualizer.ViewMode.PRESSURE},
+	{"label": "SWIRL", "mode": FlowVisualizer.ViewMode.TURBULENCE},
+]
+
 func _ready() -> void:
 	playground = FlowPlayground.new()
-	solver = playground.create_simulation_adapter()
+	solver = playground.create_simulation_adapter() as FlowLbmSolver
+	visualizer = FlowVisualizer.new()
+	add_child(visualizer)
+	visualizer.set_solver(solver)
+	editor = FlowEditor.new()
+	editor.setup(solver, visualizer)
 	queue_redraw()
 
 func _process(delta: float) -> void:
 	if running and solver != null and solver.is_ready():
 		solver.step(delta)
 		elapsed += delta
-		queue_redraw()
+	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("run_simulation"):
 		running = not running
-	elif event.is_action_pressed("reset_simulation"):
-		solver.reset()
+		queue_redraw()
+		return
+	if event.is_action_pressed("reset_simulation"):
+		editor.reset_scene()
 		elapsed = 0.0
 		queue_redraw()
+		return
+
+	if event is InputEventScreenTouch and event.pressed:
+		if _handle_toolbar_tap(event.position):
+			get_viewport().set_input_as_handled()
+			return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if _handle_toolbar_tap(event.position):
+			get_viewport().set_input_as_handled()
+			return
+
+	if editor != null and editor.handle_input(event):
+		get_viewport().set_input_as_handled()
+		queue_redraw()
+
+func _handle_toolbar_tap(position: Vector2) -> bool:
+	var viewport := get_viewport_rect().size
+	if position.y <= TOOLBAR_HEIGHT:
+		for i in range(tool_buttons.size()):
+			var rect := Rect2(Vector2(18 + i * (BUTTON_W + 10), 14), Vector2(BUTTON_W, BUTTON_H))
+			if rect.has_point(position):
+				editor.set_tool(tool_buttons[i]["tool"])
+				queue_redraw()
+				return true
+		var utility_x := viewport.x - (BUTTON_W + 10) * 3 - 18
+		var undo_rect := Rect2(Vector2(utility_x, 14), Vector2(BUTTON_W, BUTTON_H))
+		var redo_rect := Rect2(Vector2(utility_x + BUTTON_W + 10, 14), Vector2(BUTTON_W, BUTTON_H))
+		var reset_rect := Rect2(Vector2(utility_x + (BUTTON_W + 10) * 2, 14), Vector2(BUTTON_W, BUTTON_H))
+		if undo_rect.has_point(position):
+			editor.undo()
+			return true
+		if redo_rect.has_point(position):
+			editor.redo()
+			return true
+		if reset_rect.has_point(position):
+			editor.reset_scene()
+			return true
+
+	if position.y >= viewport.y - TOOLBAR_HEIGHT:
+		for i in range(view_buttons.size()):
+			var rect := Rect2(Vector2(18 + i * (BUTTON_W + 10), viewport.y - 68), Vector2(BUTTON_W, BUTTON_H))
+			if rect.has_point(position):
+				visualizer.set_view_mode(view_buttons[i]["mode"])
+				return true
+		var run_rect := Rect2(Vector2(viewport.x - BUTTON_W - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H))
+		if run_rect.has_point(position):
+			running = not running
+			return true
+	return false
 
 func _draw() -> void:
-	if solver == null or not solver.is_ready():
-		return
-	var data := solver.get_visualization_data()
-	var width: int = data["width"]
-	var height: int = data["height"]
-	var vx: PackedFloat64Array = data["velocity_x"]
-	var vy: PackedFloat64Array = data["velocity_y"]
-	var solid: PackedByteArray = data["solid"]
+	var viewport := get_viewport_rect().size
+	draw_rect(Rect2(Vector2.ZERO, Vector2(viewport.x, TOOLBAR_HEIGHT)), Color(0.035, 0.045, 0.065, 0.98), true)
+	draw_rect(Rect2(Vector2(0, viewport.y - TOOLBAR_HEIGHT), Vector2(viewport.x, TOOLBAR_HEIGHT)), Color(0.035, 0.045, 0.065, 0.98), true)
 
-	var viewport_size := get_viewport_rect().size
-	var cell_size := min(viewport_size.x / float(width), viewport_size.y / float(height))
-	var origin := (viewport_size - Vector2(width, height) * cell_size) * 0.5
+	for i in range(tool_buttons.size()):
+		var active := editor != null and editor.tool == tool_buttons[i]["tool"]
+		_draw_button(Rect2(Vector2(18 + i * (BUTTON_W + 10), 14), Vector2(BUTTON_W, BUTTON_H)), tool_buttons[i]["label"], active)
 
-	for y in range(height):
-		for x in range(width):
-			var c := y * width + x
-			var rect := Rect2(origin + Vector2(x, y) * cell_size, Vector2.ONE * (cell_size + 0.5))
-			if solid[c] == 1:
-				draw_rect(rect, Color(0.08, 0.10, 0.14), true)
-			else:
-				var speed := sqrt(vx[c] * vx[c] + vy[c] * vy[c])
-				var intensity := clamp(speed / 0.12, 0.0, 1.0)
-				var color := Color(0.08 + 0.12 * intensity, 0.24 + 0.45 * intensity, 0.72 + 0.25 * intensity)
-				draw_rect(rect, color, true)
+	var utility_x := viewport.x - (BUTTON_W + 10) * 3 - 18
+	_draw_button(Rect2(Vector2(utility_x, 14), Vector2(BUTTON_W, BUTTON_H)), "UNDO", false)
+	_draw_button(Rect2(Vector2(utility_x + BUTTON_W + 10, 14), Vector2(BUTTON_W, BUTTON_H)), "REDO", false)
+	_draw_button(Rect2(Vector2(utility_x + (BUTTON_W + 10) * 2, 14), Vector2(BUTTON_W, BUTTON_H)), "RESET", false)
 
-	var metrics := solver.get_metrics()
+	for i in range(view_buttons.size()):
+		var active := visualizer != null and visualizer.view_mode == view_buttons[i]["mode"]
+		_draw_button(Rect2(Vector2(18 + i * (BUTTON_W + 10), viewport.y - 68), Vector2(BUTTON_W, BUTTON_H)), view_buttons[i]["label"], active)
+	_draw_button(Rect2(Vector2(viewport.x - BUTTON_W - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H)), "PAUSE" if running else "RUN", running)
+
+	if solver != null and solver.is_ready():
+		var metrics := solver.get_metrics()
+		var font := ThemeDB.fallback_font
+		var status := "%s   outlet %.4f   %s" % [playground.get_display_name(), metrics["mean_outlet_speed"], "RUNNING" if running else "PAUSED"]
+		draw_string(font, Vector2(450, 49), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.88, 0.93, 1.0))
+
+func _draw_button(rect: Rect2, label: String, active: bool) -> void:
+	var bg := Color(0.12, 0.30, 0.50) if active else Color(0.10, 0.13, 0.18)
+	draw_style_box(_button_style(bg), rect)
 	var font := ThemeDB.fallback_font
-	var label := "%s  |  SPACE pause/run  |  R reset  |  outlet %.4f" % [playground.get_display_name(), metrics["mean_outlet_speed"]]
-	draw_string(font, Vector2(28, 42), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color.WHITE)
+	var text_size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, 19)
+	var pos := rect.position + Vector2((rect.size.x - text_size.x) * 0.5, (rect.size.y + text_size.y) * 0.5 - 4)
+	draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color.WHITE)
+
+func _button_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	return style
