@@ -10,7 +10,9 @@ var challenge_engine := EngineeringChallengeEngine.new()
 var telemetry := EngineeringRunTelemetry.new()
 var progression := EngineeringProgressionStore.new()
 var learn_catalog := EngineeringLearnCatalog.new()
+var campaign := EngineeringCampaignCatalog.new()
 var current_challenge: EngineeringChallengeDefinition
+var current_campaign_index := 0
 var last_result: Dictionary = {}
 var app_mode: AppMode = AppMode.CHALLENGE
 var running := true
@@ -19,6 +21,7 @@ var elapsed := 0.0
 const TOOLBAR_HEIGHT := 82.0
 const BUTTON_W := 132.0
 const BUTTON_H := 54.0
+const NAV_BUTTON_H := 42.0
 
 var mode_buttons := [
 	{"label":"CHALLENGE","mode":AppMode.CHALLENGE},
@@ -47,18 +50,56 @@ func _ready() -> void:
 	visualizer.set_solver(solver)
 	editor = FlowEditor.new()
 	editor.setup(solver, visualizer)
-	_load_first_challenge()
+	_load_campaign()
 	queue_redraw()
 
-func _load_first_challenge() -> void:
-	current_challenge = challenge_engine.load_json("res://content/flow/challenges/001_make_it_flow.json")
-	if current_challenge == null:
+func _load_campaign() -> void:
+	var errors := campaign.load_json("res://content/flow/campaign.json")
+	if not errors.is_empty():
+		push_error("Campaign validation failed: %s" % errors)
 		return
+	_load_challenge_index(0)
+
+func _load_challenge_index(index: int) -> void:
+	if campaign.size() == 0:
+		return
+	index = clampi(index, 0, campaign.size() - 1)
+	if not _challenge_is_unlocked(index):
+		return
+	var challenge := campaign.get_challenge(index)
+	if challenge == null:
+		return
+	current_campaign_index = index
+	current_challenge = challenge
 	var errors := challenge_engine.start_challenge(current_challenge)
 	if not errors.is_empty():
 		push_error("Challenge validation failed: %s" % errors)
 		return
+	last_result = {}
+	elapsed = 0.0
+	editor.reset_scene()
 	telemetry.challenge_started(current_challenge)
+	queue_redraw()
+
+func _challenge_is_unlocked(index: int) -> bool:
+	if index <= 0:
+		return true
+	if not campaign.is_unlocked(index, progression.total_stars()):
+		return false
+	var previous := campaign.get_challenge(index - 1)
+	if previous == null:
+		return false
+	return bool(progression.get_challenge_progress(previous.challenge_id).get("completed", false))
+
+func _change_challenge(direction: int) -> void:
+	if app_mode != AppMode.CHALLENGE or campaign.size() == 0:
+		return
+	var candidate := clampi(current_campaign_index + direction, 0, campaign.size() - 1)
+	if candidate == current_campaign_index:
+		return
+	if direction > 0 and not _challenge_is_unlocked(candidate):
+		return
+	_load_challenge_index(candidate)
 
 func _process(delta: float) -> void:
 	if app_mode != AppMode.LEARN and running and solver != null and solver.is_ready():
@@ -111,8 +152,7 @@ func _switch_mode(mode: AppMode) -> void:
 		editor.reset_blank_scene()
 		running = true
 	elif app_mode == AppMode.CHALLENGE:
-		editor.reset_scene()
-		_load_first_challenge()
+		_load_challenge_index(current_campaign_index)
 		running = true
 	else:
 		running = false
@@ -154,6 +194,16 @@ func _handle_toolbar_tap(position: Vector2) -> bool:
 		if app_mode != AppMode.LEARN and undo_rect.has_point(position): editor.undo(); return true
 		if app_mode != AppMode.LEARN and redo_rect.has_point(position): editor.redo(); return true
 		if reset_rect.has_point(position): _reset_current_mode(); return true
+
+	if app_mode == AppMode.CHALLENGE:
+		var previous_rect := Rect2(Vector2(28, 184), Vector2(BUTTON_W, NAV_BUTTON_H))
+		var next_rect := Rect2(Vector2(170, 184), Vector2(BUTTON_W, NAV_BUTTON_H))
+		if previous_rect.has_point(position):
+			_change_challenge(-1)
+			return true
+		if next_rect.has_point(position):
+			_change_challenge(1)
+			return true
 
 	if app_mode == AppMode.LEARN:
 		var mode_rect := Rect2(Vector2(viewport.x - BUTTON_W - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H))
@@ -206,10 +256,25 @@ func _draw() -> void:
 	_draw_button(Rect2(Vector2(viewport.x - BUTTON_W - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H)), "PAUSE" if running else "RUN", running)
 
 	if app_mode == AppMode.CHALLENGE and current_challenge != null:
-		draw_string(font, Vector2(28, 112), current_challenge.title, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.94, 0.97, 1.0))
-		draw_string(font, Vector2(28, 140), current_challenge.description, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.70, 0.78, 0.88))
+		var meta := campaign.get_meta(current_campaign_index)
+		draw_string(font, Vector2(28, 108), "Chapter %d — %s   Level %d/%d" % [int(meta.get("chapter_number", 1)), str(meta.get("chapter_title", "")), current_campaign_index + 1, campaign.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.62, 0.73, 0.86))
+		draw_string(font, Vector2(28, 137), current_challenge.title, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.94, 0.97, 1.0))
+		draw_string(font, Vector2(28, 163), current_challenge.description, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.70, 0.78, 0.88))
+		_draw_button(Rect2(Vector2(28, 184), Vector2(BUTTON_W, NAV_BUTTON_H)), "PREV", current_campaign_index > 0)
+		var next_unlocked := current_campaign_index < campaign.size() - 1 and _challenge_is_unlocked(current_campaign_index + 1)
+		_draw_button(Rect2(Vector2(170, 184), Vector2(BUTTON_W, NAV_BUTTON_H)), "NEXT", next_unlocked)
 		var p := progression.get_challenge_progress(current_challenge.challenge_id)
-		draw_string(font, Vector2(28, 166), "Stars %d/3   Best %.1f   Total stars %d" % [int(p["stars"]), float(p["best_score"]), progression.total_stars()], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.72, 0.84, 0.96))
+		var targets: Array = current_challenge.rewards.get("target_scores", [])
+		var target_text := ""
+		if targets.size() >= 3:
+			target_text = "   Targets %d / %d / %d" % [int(targets[0]), int(targets[1]), int(targets[2])]
+		draw_string(font, Vector2(320, 213), "Stars %d/3   Best %.1f   Total %d%s" % [int(p["stars"]), float(p["best_score"]), progression.total_stars(), target_text], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.72, 0.84, 0.96))
+		if current_campaign_index < campaign.size() - 1 and not next_unlocked:
+			var next_meta := campaign.get_meta(current_campaign_index + 1)
+			var needed := int(next_meta.get("unlock_stars", 0))
+			var previous_completed := bool(p.get("completed", false))
+			var lock_reason := "Complete this level" if not previous_completed else "Earn %d total stars" % needed
+			draw_string(font, Vector2(28, 248), "Next locked — %s" % lock_reason, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.86, 0.66, 0.46))
 	elif app_mode == AppMode.SANDBOX:
 		draw_string(font, Vector2(28, 112), "Flow Lab Sandbox", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.94, 0.97, 1.0))
 		draw_string(font, Vector2(28, 140), "No score. No objective. Draw, erase, run, and experiment.", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.70, 0.78, 0.88))
