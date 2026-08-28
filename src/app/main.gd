@@ -4,6 +4,10 @@ var playground: FlowPlayground
 var solver: FlowLbmSolver
 var visualizer: FlowVisualizer
 var editor: FlowEditor
+var challenge_engine := EngineeringChallengeEngine.new()
+var telemetry := EngineeringRunTelemetry.new()
+var current_challenge: EngineeringChallengeDefinition
+var last_result: Dictionary = {}
 var running := true
 var elapsed := 0.0
 
@@ -32,7 +36,18 @@ func _ready() -> void:
 	visualizer.set_solver(solver)
 	editor = FlowEditor.new()
 	editor.setup(solver, visualizer)
+	_load_first_challenge()
 	queue_redraw()
+
+func _load_first_challenge() -> void:
+	current_challenge = challenge_engine.load_json("res://content/flow/challenges/001_make_it_flow.json")
+	if current_challenge == null:
+		return
+	var errors := challenge_engine.start_challenge(current_challenge)
+	if not errors.is_empty():
+		push_error("Challenge validation failed: %s" % errors)
+		return
+	telemetry.challenge_started(current_challenge)
 
 func _process(delta: float) -> void:
 	if running and solver != null and solver.is_ready():
@@ -48,6 +63,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("reset_simulation"):
 		editor.reset_scene()
 		elapsed = 0.0
+		last_result = {}
 		queue_redraw()
 		return
 
@@ -64,6 +80,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		queue_redraw()
 
+func _score_run() -> void:
+	if current_challenge == null or solver == null:
+		return
+	challenge_engine.begin_attempt()
+	last_result = challenge_engine.evaluate(Callable(FlowChallengeEvaluator, "evaluate"), {"metrics": solver.get_metrics()})
+	telemetry.attempt_scored(current_challenge, last_result, challenge_engine.get_time_to_first_run_seconds())
+	queue_redraw()
+
 func _handle_toolbar_tap(position: Vector2) -> bool:
 	var viewport := get_viewport_rect().size
 	if position.y <= TOOLBAR_HEIGHT:
@@ -77,23 +101,24 @@ func _handle_toolbar_tap(position: Vector2) -> bool:
 		var undo_rect := Rect2(Vector2(utility_x, 14), Vector2(BUTTON_W, BUTTON_H))
 		var redo_rect := Rect2(Vector2(utility_x + BUTTON_W + 10, 14), Vector2(BUTTON_W, BUTTON_H))
 		var reset_rect := Rect2(Vector2(utility_x + (BUTTON_W + 10) * 2, 14), Vector2(BUTTON_W, BUTTON_H))
-		if undo_rect.has_point(position):
-			editor.undo()
-			return true
-		if redo_rect.has_point(position):
-			editor.redo()
-			return true
+		if undo_rect.has_point(position): editor.undo(); return true
+		if redo_rect.has_point(position): editor.redo(); return true
 		if reset_rect.has_point(position):
-			editor.reset_scene()
-			return true
+			editor.reset_scene(); last_result = {}; elapsed = 0.0; return true
 
 	if position.y >= viewport.y - TOOLBAR_HEIGHT:
 		for i in range(view_buttons.size()):
 			var rect := Rect2(Vector2(18 + i * (BUTTON_W + 10), viewport.y - 68), Vector2(BUTTON_W, BUTTON_H))
 			if rect.has_point(position):
 				visualizer.set_view_mode(view_buttons[i]["mode"])
+				if current_challenge != null:
+					telemetry.visualization_changed(current_challenge.challenge_id, view_buttons[i]["label"])
 				return true
+		var score_rect := Rect2(Vector2(viewport.x - (BUTTON_W + 10) * 2 - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H))
 		var run_rect := Rect2(Vector2(viewport.x - BUTTON_W - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H))
+		if score_rect.has_point(position):
+			_score_run()
+			return true
 		if run_rect.has_point(position):
 			running = not running
 			return true
@@ -107,7 +132,6 @@ func _draw() -> void:
 	for i in range(tool_buttons.size()):
 		var active := editor != null and editor.tool == tool_buttons[i]["tool"]
 		_draw_button(Rect2(Vector2(18 + i * (BUTTON_W + 10), 14), Vector2(BUTTON_W, BUTTON_H)), tool_buttons[i]["label"], active)
-
 	var utility_x := viewport.x - (BUTTON_W + 10) * 3 - 18
 	_draw_button(Rect2(Vector2(utility_x, 14), Vector2(BUTTON_W, BUTTON_H)), "UNDO", false)
 	_draw_button(Rect2(Vector2(utility_x + BUTTON_W + 10, 14), Vector2(BUTTON_W, BUTTON_H)), "REDO", false)
@@ -116,13 +140,23 @@ func _draw() -> void:
 	for i in range(view_buttons.size()):
 		var active := visualizer != null and visualizer.view_mode == view_buttons[i]["mode"]
 		_draw_button(Rect2(Vector2(18 + i * (BUTTON_W + 10), viewport.y - 68), Vector2(BUTTON_W, BUTTON_H)), view_buttons[i]["label"], active)
+	_draw_button(Rect2(Vector2(viewport.x - (BUTTON_W + 10) * 2 - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H)), "SCORE", false)
 	_draw_button(Rect2(Vector2(viewport.x - BUTTON_W - 18, viewport.y - 68), Vector2(BUTTON_W, BUTTON_H)), "PAUSE" if running else "RUN", running)
 
-	if solver != null and solver.is_ready():
-		var metrics := solver.get_metrics()
-		var font := ThemeDB.fallback_font
-		var status := "%s   outlet %.4f   %s" % [playground.get_display_name(), metrics["mean_outlet_speed"], "RUNNING" if running else "PAUSED"]
-		draw_string(font, Vector2(450, 49), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.88, 0.93, 1.0))
+	var font := ThemeDB.fallback_font
+	if current_challenge != null:
+		draw_string(font, Vector2(450, 32), current_challenge.title, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.94, 0.97, 1.0))
+		draw_string(font, Vector2(450, 58), current_challenge.description, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.70, 0.78, 0.88))
+
+	if not last_result.is_empty():
+		var panel := Rect2(Vector2(viewport.x - 450, 100), Vector2(420, 185))
+		draw_rect(panel, Color(0.03, 0.045, 0.07, 0.93), true)
+		var result_title := "%s  SCORE %.1f  GRADE %s" % ["PASSED" if last_result.get("success", false) else "KEEP TUNING", float(last_result.get("score", 0.0)), str(last_result.get("grade", ""))]
+		draw_string(font, panel.position + Vector2(18, 32), result_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
+		draw_string(font, panel.position + Vector2(18, 60), "Best %.1f   Change %+.1f" % [float(last_result.get("best_score", 0.0)), float(last_result.get("improvement", 0.0))], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.72, 0.84, 0.96))
+		var feedback: PackedStringArray = last_result.get("feedback", PackedStringArray())
+		for i in range(min(3, feedback.size())):
+			draw_string(font, panel.position + Vector2(18, 91 + i * 27), feedback[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.86, 0.90, 0.94))
 
 func _draw_button(rect: Rect2, label: String, active: bool) -> void:
 	var bg := Color(0.12, 0.30, 0.50) if active else Color(0.10, 0.13, 0.18)
