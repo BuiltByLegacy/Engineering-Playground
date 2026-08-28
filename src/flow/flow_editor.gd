@@ -56,6 +56,21 @@ func reset_scene() -> void:
 	solver.reset()
 	visualizer.queue_redraw()
 
+func reset_blank_scene() -> void:
+	if solver == null:
+		return
+	_push_undo()
+	_redo_stack.clear()
+	var blank := PackedByteArray()
+	blank.resize(solver.width * solver.height)
+	blank.fill(0)
+	solver.apply_solid_mask(blank)
+	solver.reset()
+	camera_offset = Vector2.ZERO
+	camera_zoom = 1.0
+	visualizer.set_camera(camera_offset, camera_zoom)
+	visualizer.queue_redraw()
+
 func handle_input(event: InputEvent) -> bool:
 	if solver == null or visualizer == null:
 		return false
