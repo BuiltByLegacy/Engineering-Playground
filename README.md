@@ -68,41 +68,74 @@ See [`docs/ADR-001-mobile-stack.md`](docs/ADR-001-mobile-stack.md).
 project.godot
 scenes/
   main.tscn
+content/
+  flow/challenges/
+    001_make_it_flow.json
 src/
   app/
     main.gd
   core/
+    challenge_definition.gd
+    challenge_engine.gd
+    run_telemetry.gd
   flow/
     flow_editor.gd
     flow_visualizer.gd
+    flow_challenge_evaluator.gd
     flow_playground.gd
     lbm_solver.gd
 docs/
 ```
 
-`src/core` is domain-neutral. `src/flow` contains the Flow Lab interaction, visualization, module, and solver layers.
+`src/core` is domain-neutral. `src/flow` contains the Flow Lab interaction, visualization, scoring, module, and solver layers. Challenge content is authored as data under `content/` rather than hard-coded screen-by-screen.
 
 ## Current implementation
 
-The current playable slice covers the foundation plus substantial work on GitHub issues #5 and #6:
+The current playable slice covers the foundation plus substantial work on GitHub issues #5 through #8:
 
 - Mobile project shell and landscape simulation target
 - Shared playground and simulation contracts
 - Flow Lab registration boundary
 - CPU D2Q9 Lattice Boltzmann technical prototype
-- Channel/obstacle demonstration scene
 - Pressure-like density and velocity fields exposed by the solver
 - Live tracer-particle flow visualization
-- Velocity heatmap
-- Pressure heatmap
-- Swirl/recirculation visualization based on local vorticity
+- Velocity, pressure, and swirl/recirculation views
 - Touch-first wall drawing and erase tools
 - Pan and pinch-to-zoom workspace navigation
 - Mouse fallback for desktop development
 - Undo/redo geometry history
 - Scene reset and solver-safe geometry commits
-- Large mobile toolbar targets for tools and visualization modes
-- Architecture and solver limitations documented
+- Versioned, validated challenge schema
+- JSON challenge loading
+- Reusable challenge lifecycle: start → attempt → evaluate → retry
+- Flow-specific multi-objective evaluator behind the generic challenge engine
+- Weighted scoring for flow delivery, pressure retention, turbulence, and material usage
+- Success thresholds independent from score weighting
+- Explorer-mode qualitative feedback and Engineer-mode numerical feedback
+- S/A/B/C/D run grades
+- Local personal-best persistence
+- Improvement vs previous best shown after scoring
+- Local privacy-conscious gameplay telemetry for attempts, first-run timing, score changes, hints, and visualization usage
+- First data-driven challenge: **Make It Flow**
+
+## Core game loop
+
+The prototype now supports the intended MVP loop:
+
+> **Challenge → Design → Run → Observe → Score → Learn → Modify → Retry**
+
+A run is not scored on flow alone. Challenge designers can independently weight:
+
+- flow delivery
+- pressure retention / loss
+- turbulence / recirculation
+- material usage
+- balance
+- cost
+- complexity
+- packaging compliance
+
+The latter dimensions are already represented by the shared scoring contract and will become active as the relevant components and challenge types are implemented.
 
 ## Current controls
 
@@ -120,6 +153,7 @@ Bottom toolbar:
 - **SPEED** — velocity field
 - **PRESS** — pressure-like density field
 - **SWIRL** — vorticity/recirculation indicator
+- **SCORE** — evaluate the current design against the active challenge
 - **RUN / PAUSE** — control the simulation
 
 Touch behavior:
@@ -129,6 +163,32 @@ Touch behavior:
 - Two-finger drag pans and pinches to zoom.
 - Geometry changes are converted directly to the solver grid; no meshing/setup workflow is exposed to the player.
 
+## Challenge authoring
+
+Challenges use a versioned JSON schema. A challenge can define:
+
+- title and description
+- starting state
+- allowed tools
+- constraints
+- success conditions
+- scoring weights
+- hints
+- concept unlocks
+- rewards
+- Explorer/Engineer presentation mode
+- Flow-domain targets or future domain-specific config
+
+This allows new Flow Lab levels to be created without changing the core gameplay screen.
+
+## Scoring philosophy
+
+Engineering Playground should reward **tradeoffs**, not a single optimized number. A design that increases flow but wastes material or creates large losses should not automatically win.
+
+The current Flow evaluator produces a normalized 0–100 score plus a grade. It also identifies the weakest scoring dimension and gives a concise next-step suggestion such as smoothing a restriction, reducing abrupt turns, or trimming excess material.
+
+Current solver values are educational/gameplay proxies and are not presented as validated engineering analysis.
+
 ## Running locally
 
 1. Install a stable Godot 4 release.
@@ -136,7 +196,7 @@ Touch behavior:
 3. Open `project.godot` in Godot.
 4. Run the project.
 
-The prototype opens directly into the Flow Lab playable solver/editor demonstration. Mobile export configuration and real-device performance are still being hardened.
+The prototype opens directly into the first Flow Lab challenge. Mobile export configuration and real-device performance are still being hardened.
 
 ## Flow solver strategy
 
@@ -183,5 +243,7 @@ Playable interaction:
 
 - **#5** Flow visualization — particles, pressure, velocity, turbulence
 - **#6** Touch-first Flow editor and geometry tools
+- **#7** Challenge engine and content schema
+- **#8** Flow scoring, engineering feedback, and run telemetry
 
-Next major slice: **#7 Challenge engine + #8 scoring/engineering feedback**, which turns the sandbox interaction into a repeatable game loop.
+Next major slice: **#9 Player progression/concept unlocks + #10 Sandbox mode**, followed by authoring and tuning the launch challenge pack in **#11**.
