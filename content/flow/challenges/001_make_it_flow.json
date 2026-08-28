@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "challenge_id": "flow_001_make_it_flow",
+  "playground_id": "flow",
+  "title": "Make It Flow",
+  "description": "Get the flow around the obstacle and keep losses under control.",
+  "difficulty": 1,
+  "presentation_mode": "explorer",
+  "starting_state": {"geometry": "default_channel"},
+  "allowed_tools": ["draw_wall", "erase", "pan"],
+  "constraints": {"max_added_solid_cells": 260},
+  "success_conditions": {
+    "min_outlet_speed": 0.045,
+    "max_pressure_loss": 0.030,
+    "minimum_score": 60.0
+  },
+  "scoring_weights": {
+    "flow": 0.40,
+    "pressure": 0.25,
+    "turbulence": 0.20,
+    "material": 0.15
+  },
+  "concept_unlocks": ["flow_rate", "restriction", "recirculation"],
+  "hints": [
+    "A smoother path usually loses less energy than a sudden turn.",
+    "Watch the swirl view behind the obstacle."
+  ],
+  "rewards": {"stars": 1},
+  "domain_config": {
+    "targets": {
+      "outlet_speed": 0.060,
+      "max_pressure_loss": 0.020,
+      "max_vorticity": 0.010
+    }
+  }
+}
