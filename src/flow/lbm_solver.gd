@@ -79,18 +79,54 @@ func restore_default_geometry() -> void:
 
 func get_metrics() -> Dictionary:
 	var outlet_speed := 0.0
+	var outlet_density := 0.0
+	var inlet_density := 0.0
 	var samples := 0
+	var inlet_samples := 0
 	var kinetic := 0.0
+	var vorticity_total := 0.0
+	var vorticity_samples := 0
+	var solid_cells := 0
+	var base_solid_cells := 0
+
 	for y in range(1, height - 1):
 		var outlet := _cell(width - 2, y)
 		if not _solid[outlet]:
 			outlet_speed += sqrt(_ux[outlet] * _ux[outlet] + _uy[outlet] * _uy[outlet])
+			outlet_density += _rho[outlet]
 			samples += 1
-	for c in range(width * height):
-		if not _solid[c]:
+		var inlet := _cell(1, y)
+		if not _solid[inlet]:
+			inlet_density += _rho[inlet]
+			inlet_samples += 1
+
+	for y in range(height):
+		for x in range(width):
+			var c := _cell(x, y)
+			if _solid[c]:
+				solid_cells += 1
+				continue
 			kinetic += _ux[c] * _ux[c] + _uy[c] * _uy[c]
+			if x > 0 and x < width - 1 and y > 0 and y < height - 1:
+				var dv_dx := (_uy[_cell(x + 1, y)] - _uy[_cell(x - 1, y)]) * 0.5
+				var du_dy := (_ux[_cell(x, y + 1)] - _ux[_cell(x, y - 1)]) * 0.5
+				vorticity_total += abs(dv_dx - du_dy)
+				vorticity_samples += 1
+
+	for value in _default_solid:
+		if value == 1:
+			base_solid_cells += 1
+
+	var mean_inlet_density := inlet_density / max(1, inlet_samples)
+	var mean_outlet_density := outlet_density / max(1, samples)
 	return {
 		"mean_outlet_speed": outlet_speed / max(1, samples),
+		"mean_inlet_density": mean_inlet_density,
+		"mean_outlet_density": mean_outlet_density,
+		"pressure_loss_proxy": abs(mean_inlet_density - mean_outlet_density),
+		"mean_vorticity_proxy": vorticity_total / max(1, vorticity_samples),
+		"solid_cells": solid_cells,
+		"base_solid_cells": base_solid_cells,
 		"kinetic_energy_proxy": kinetic,
 		"grid_width": width,
 		"grid_height": height,
@@ -149,7 +185,6 @@ func _collide_and_stream() -> void:
 				for i in range(Q):
 					_next[_slot(cell, OPP[i])] += _f[_slot(cell, i)]
 				continue
-
 			var rho := 0.0
 			var ux := 0.0
 			var uy := 0.0
@@ -162,7 +197,6 @@ func _collide_and_stream() -> void:
 				rho = 1.0
 			ux /= rho
 			uy /= rho
-
 			for i in range(Q):
 				var fi := _f[_slot(cell, i)]
 				var feq := _equilibrium(i, rho, ux, uy)
@@ -185,7 +219,6 @@ func _apply_inlet_outlet() -> void:
 		if not _solid[inlet]:
 			for i in range(Q):
 				_f[_slot(inlet, i)] = _equilibrium(i, 1.0, inlet_velocity, 0.0)
-
 		var outlet := _cell(width - 2, y)
 		var upstream := _cell(width - 3, y)
 		if not _solid[outlet] and not _solid[upstream]:
