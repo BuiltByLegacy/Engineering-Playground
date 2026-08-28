@@ -56,8 +56,14 @@ scenes/
 content/
   flow/
     campaign.json
+    showcases.json
     challenges/
       001_make_it_flow.json
+    showcases/
+      001_fix_the_shower.json
+      002_build_the_exhaust.json
+      003_balance_the_hvac.json
+      004_design_the_manifold.json
 src/
   app/
     main.gd
@@ -73,13 +79,15 @@ src/
     flow_visualizer.gd
     flow_challenge_evaluator.gd
     flow_playground.gd
+    showcase_catalog.gd
     lbm_solver.gd
 docs/
+  FLOW_SHOWCASES.md
 ```
 
 ## Current implementation
 
-The current playable slice now covers the platform plus the initial 30-level Flow campaign:
+The current playable slice now covers the platform plus the initial 30-level Flow campaign and four applied showcase definitions:
 
 - mobile project shell and landscape simulation target
 - shared playground and simulation contracts
@@ -102,6 +110,8 @@ The current playable slice now covers the platform plus the initial 30-level Flo
 - sequential level unlocks plus chapter star gates
 - per-level replay targets for 1/2/3 stars
 - previous/next challenge navigation
+- four real-world showcase challenge definitions with explicit fidelity boundaries
+- reusable showcase catalog loader and media metadata
 
 ## Launch campaign
 
@@ -113,20 +123,22 @@ The launch campaign contains **30 authored levels** across five chapters:
 4. **Control It** — geometry-based throttling and conditioning until true valve/pump components are implemented.
 5. **Engineer It** — simplified applied scenarios for plumbing, exhaust, HVAC, manifold intuition, packaging, and a capstone.
 
-Every level defines its own:
-
-- success thresholds
-- scoring weights
-- concept unlocks
-- hints
-- material constraint
-- 1/2/3-star replay targets
-- domain targets
-- campaign/chapter metadata
+Every level defines its own success thresholds, scoring weights, concept unlocks, hints, material constraints, 1/2/3-star replay targets, domain targets, and campaign/chapter metadata.
 
 Chapter progression is gated by both sequential completion and total stars, so replaying earlier levels can unlock later chapters.
 
-The campaign intentionally avoids pretending the current solver can do things it cannot. True multi-outlet balance, valve behavior, pump/fan curves, compressible exhaust pulses, and full plumbing/HVAC network analysis remain future solver/component work.
+## Applied Flow showcases
+
+Four dedicated showcase challenges sit alongside the main campaign and are structured for screenshots, trailers, store media, and future higher-fidelity upgrades:
+
+1. **Fix the Shower** — residential plumbing. Optimize delivery, pressure loss, and material usage.
+2. **Build the Exhaust** — automotive exhaust. Optimize flow, restriction, route length, and packaging.
+3. **Balance the HVAC** — HVAC distribution. Explore delivery, symmetry, restriction, and path complexity.
+4. **Design the Manifold** — manifold optimization. Explore compact packaging, pressure loss, and visually uniform distribution.
+
+Each showcase contains theme metadata, environment labels, scoring targets, replay thresholds, concept unlocks, and an explicit fidelity note. See [`docs/FLOW_SHOWCASES.md`](docs/FLOW_SHOWCASES.md).
+
+The current solver intentionally does **not** claim true multi-outlet balancing, valve/pump behavior, plumbing code compliance, HVAC commissioning accuracy, exhaust pulse/scavenging performance, or flow-bench-equivalent manifold results.
 
 ## Core game loop
 
@@ -136,7 +148,7 @@ Passing a challenge records completion and stars, updates the best result, and u
 
 ### Stars
 
-Star thresholds are now **challenge-specific**. Each level carries three replay target scores rather than relying on one global 60/75/90 rule.
+Star thresholds are **challenge-specific**. Each level carries three replay target scores rather than relying on one global 60/75/90 rule.
 
 Stars and concept discoveries persist locally without requiring an account.
 
@@ -254,5 +266,6 @@ Implemented slices:
 - **#9** Player progression, concept unlocks, and Learn mode
 - **#10** Flow Lab sandbox mode
 - **#11** 30-level Flow Lab launch campaign authoring and campaign progression shell
+- **#12** Applied Flow showcase scenarios — plumbing, exhaust, HVAC, manifold
 
-Remaining #11 work is real playtesting and threshold tuning against observed solver behavior on desktop/mobile hardware. The discrete component work required for valves, pumps/fans, and placeable inlet/outlet geometry remains separate follow-up work before those mechanics become true simulation components.
+Remaining #11 work is real playtesting and threshold tuning against observed solver behavior on desktop/mobile hardware. Remaining #12 work is the polished in-app showcase-selection/presentation layer plus real-device capture/tuning. Discrete components and higher-fidelity domain solvers remain separate follow-up work.
