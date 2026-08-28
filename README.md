@@ -8,18 +8,11 @@ The long-term product is **one mobile game with multiple modular playgrounds**. 
 
 ## MVP: Flow Lab
 
-Flow Lab is a touch-first 2D engineering sandbox and challenge game. Players alter geometry, run a fluid simulation, inspect the result, receive engineering feedback, and iterate to improve their design.
+Flow Lab now has three player-facing modes:
 
-Initial challenge families:
-
-- Flow fundamentals
-- Pressure and restriction
-- Split flow and balancing
-- Valves and pumps/fans
-- Residential plumbing
-- Automotive exhaust routing
-- HVAC distribution
-- Multi-outlet manifolds
+- **Challenge** — solve engineering problems, score the design, improve it, and earn progression.
+- **Sandbox** — free experimentation with the same editor, solver, and visualization stack but no objective or score.
+- **Learn** — a discovery library that reveals engineering concepts after the player encounters them in gameplay.
 
 The MVP deliberately prioritizes **fast, visually understandable iteration** over professional CFD accuracy.
 
@@ -32,9 +25,9 @@ Engineering Playground
 ├── Core
 │   ├── playground registry
 │   ├── challenge lifecycle
-│   ├── player/session state
-│   ├── scoring/progression hooks
-│   ├── concept unlocks
+│   ├── player progression
+│   ├── concept unlocks / Learn catalog
+│   ├── scoring / telemetry
 │   └── simulation adapter contract
 └── Playgrounds
     ├── Flow Lab          ← MVP
@@ -45,20 +38,11 @@ Engineering Playground
     └── Power Lab         ← future electrical
 ```
 
-Flow-specific physics must never become a dependency of the shared game core.
+Flow-specific physics remains outside the shared game core.
 
-## Technology decision
+## Technology
 
-The MVP uses **Godot 4 + GDScript**.
-
-Why:
-
-- Native mobile game workflow for iOS and Android
-- Strong 2D and touch support
-- Fast iteration for game UX
-- RenderingDevice/compute path available for later GPU acceleration on supported devices
-- CPU simulation fallback remains possible for compatibility
-- No requirement to build a CAD-style UI framework before proving the gameplay loop
+The MVP uses **Godot 4 + GDScript** for native mobile workflow, touch-first 2D interaction, and a future path to GPU compute while preserving a CPU fallback.
 
 See [`docs/ADR-001-mobile-stack.md`](docs/ADR-001-mobile-stack.md).
 
@@ -77,6 +61,8 @@ src/
   core/
     challenge_definition.gd
     challenge_engine.gd
+    progression_store.gd
+    learn_catalog.gd
     run_telemetry.gd
   flow/
     flow_editor.gd
@@ -87,107 +73,107 @@ src/
 docs/
 ```
 
-`src/core` is domain-neutral. `src/flow` contains the Flow Lab interaction, visualization, scoring, module, and solver layers. Challenge content is authored as data under `content/` rather than hard-coded screen-by-screen.
-
 ## Current implementation
 
-The current playable slice covers the foundation plus substantial work on GitHub issues #5 through #8:
+The current playable slice now covers GitHub issues #2 through #10 at an implementation level:
 
-- Mobile project shell and landscape simulation target
-- Shared playground and simulation contracts
-- Flow Lab registration boundary
-- CPU D2Q9 Lattice Boltzmann technical prototype
-- Pressure-like density and velocity fields exposed by the solver
-- Live tracer-particle flow visualization
-- Velocity, pressure, and swirl/recirculation views
-- Touch-first wall drawing and erase tools
-- Pan and pinch-to-zoom workspace navigation
-- Mouse fallback for desktop development
-- Undo/redo geometry history
-- Scene reset and solver-safe geometry commits
-- Versioned, validated challenge schema
-- JSON challenge loading
-- Reusable challenge lifecycle: start → attempt → evaluate → retry
-- Flow-specific multi-objective evaluator behind the generic challenge engine
-- Weighted scoring for flow delivery, pressure retention, turbulence, and material usage
-- Success thresholds independent from score weighting
-- Explorer-mode qualitative feedback and Engineer-mode numerical feedback
-- S/A/B/C/D run grades
-- Local personal-best persistence
-- Improvement vs previous best shown after scoring
-- Local privacy-conscious gameplay telemetry for attempts, first-run timing, score changes, hints, and visualization usage
-- First data-driven challenge: **Make It Flow**
+- mobile project shell and landscape simulation target
+- shared playground and simulation contracts
+- CPU D2Q9 Lattice Boltzmann prototype
+- live particle, velocity, pressure, and swirl visualization
+- touch draw/erase/pan plus pinch zoom
+- undo/redo and reset
+- versioned JSON challenge schema
+- reusable challenge lifecycle
+- multi-objective Flow scoring and engineering feedback
+- local privacy-conscious run telemetry
+- local personal-best persistence
+- challenge completion, grades, and 1–3 star progression
+- local presentation preference: Explorer or Engineer
+- contextual concept unlocks from challenge completion
+- Learn library with discovered concepts
+- Challenge / Sandbox / Learn mode switching
+- Sandbox clean-scene reset using the same editor/solver/visualizer implementation
+- first data-driven challenge: **Make It Flow**
 
 ## Core game loop
 
-The prototype now supports the intended MVP loop:
-
 > **Challenge → Design → Run → Observe → Score → Learn → Modify → Retry**
 
-A run is not scored on flow alone. Challenge designers can independently weight:
+Passing a challenge records completion and stars, updates the best result, and unlocks concepts attached to that challenge. The first challenge currently unlocks **Flow Rate**, **Restriction**, and **Vortices & Recirculation**.
 
-- flow delivery
-- pressure retention / loss
-- turbulence / recirculation
-- material usage
-- balance
-- cost
-- complexity
-- packaging compliance
+### Stars
 
-The latter dimensions are already represented by the shared scoring contract and will become active as the relevant components and challenge types are implemented.
+- **1 star:** score 60+
+- **2 stars:** score 75+
+- **3 stars:** score 90+
+
+Stars and concept discoveries persist locally without requiring an account.
+
+## Learn mode
+
+Learn mode is intentionally discovery-driven rather than a mandatory lesson sequence.
+
+Initial concept catalog:
+
+- Flow Rate
+- Pressure
+- Velocity
+- Restriction
+- Vortices & Recirculation
+- Pressure Loss
+- Flow Balance
+- Bernoulli Principle
+- Reynolds Number
+
+Each concept has both:
+
+- **Explorer wording** — short, intuitive language
+- **Engineer wording** — technical terminology and engineering meaning
+
+The player can switch presentation mode without duplicating challenge content.
+
+## Sandbox mode
+
+Sandbox removes challenge objectives and scoring while reusing the exact same Flow systems.
+
+Current sandbox behavior:
+
+- starts from a clean channel
+- draw and erase boundaries
+- pan and zoom
+- run/pause simulation
+- switch Flow / Speed / Pressure / Swirl views
+- undo/redo edits
+- clear back to a blank scene immediately
+- inspect the same live solver behavior used by Challenge mode
+
+No account is required for basic sandbox use. Save/share/community architecture can be added later without making Sandbox a separate code path.
+
+Current component limitation: discrete placeable **inlets/outlets, valves, and pumps/fans** are still future Flow-editor work. The MVP sandbox currently uses the solver's fixed inlet/outlet channel boundaries plus free geometry editing.
+
+## Scoring philosophy
+
+Engineering Playground rewards **tradeoffs**, not a single maximum value. Flow challenges can weight delivery, pressure retention, turbulence/recirculation, material usage, balance, cost, complexity, and packaging.
+
+Current solver values are educational/gameplay proxies and are not presented as validated engineering analysis.
 
 ## Current controls
 
 Top toolbar:
 
-- **DRAW** — paint flow boundaries/obstacles
-- **ERASE** — remove editable boundaries
-- **PAN** — move around the workspace
-- **UNDO / REDO** — restore geometry edits
-- **RESET** — restore the default test geometry
+- **CHALLENGE / SANDBOX / LEARN** — switch product modes
+- **DRAW / ERASE / PAN** — edit or navigate the flow workspace
+- **UNDO / REDO / RESET** — edit history and reset current mode
 
-Bottom toolbar:
+Bottom toolbar in Challenge/Sandbox:
 
-- **FLOW** — animated tracer particles
-- **SPEED** — velocity field
-- **PRESS** — pressure-like density field
-- **SWIRL** — vorticity/recirculation indicator
-- **SCORE** — evaluate the current design against the active challenge
-- **RUN / PAUSE** — control the simulation
+- **FLOW / SPEED / PRESS / SWIRL** — visualization modes
+- **SCORE** in Challenge — evaluate design
+- **CLEAR** in Sandbox — clean blank channel
+- **RUN / PAUSE** — simulation control
 
-Touch behavior:
-
-- Single-finger/stylus drag edits geometry in Draw/Erase modes.
-- Pan mode moves the workspace.
-- Two-finger drag pans and pinches to zoom.
-- Geometry changes are converted directly to the solver grid; no meshing/setup workflow is exposed to the player.
-
-## Challenge authoring
-
-Challenges use a versioned JSON schema. A challenge can define:
-
-- title and description
-- starting state
-- allowed tools
-- constraints
-- success conditions
-- scoring weights
-- hints
-- concept unlocks
-- rewards
-- Explorer/Engineer presentation mode
-- Flow-domain targets or future domain-specific config
-
-This allows new Flow Lab levels to be created without changing the core gameplay screen.
-
-## Scoring philosophy
-
-Engineering Playground should reward **tradeoffs**, not a single optimized number. A design that increases flow but wastes material or creates large losses should not automatically win.
-
-The current Flow evaluator produces a normalized 0–100 score plus a grade. It also identifies the weakest scoring dimension and gives a concise next-step suggestion such as smoothing a restriction, reducing abrupt turns, or trimming excess material.
-
-Current solver values are educational/gameplay proxies and are not presented as validated engineering analysis.
+Learn mode replaces simulation controls with the discovered-concept library and an **EXPLORER / ENGINEER** presentation toggle.
 
 ## Running locally
 
@@ -202,48 +188,38 @@ The prototype opens directly into the first Flow Lab challenge. Mobile export co
 
 The first technical spike uses a **D2Q9 Lattice Boltzmann Method (LBM)** implementation on the CPU because it maps naturally to a grid, supports interactive obstacles, and exposes velocity/density fields useful for game visualization and scoring.
 
-The solver is intentionally an educational/gameplay approximation. It is **not professional CFD** and must not be presented as validated engineering analysis.
+The solver is intentionally an educational/gameplay approximation. It is **not professional CFD**.
 
-The architecture leaves room for:
+The architecture leaves room for CPU fallback, GPU acceleration, dynamic quality scaling, and different domain solvers for later playgrounds.
 
-1. CPU LBM baseline for broad compatibility.
-2. GPU compute acceleration on capable mobile devices.
-3. Dynamic resolution/particle quality scaling.
-4. Different domain solvers for future playgrounds.
+## MVP exclusions
 
-## MVP rules
-
-We are intentionally **not** building these yet:
+Not in the current MVP:
 
 - 3D CFD
 - CAD import
 - FEA
-- Full MBD/GD&T implementation
-- Manufacturing simulation
-- Electrical simulation
-- Classroom dashboards
+- full MBD/GD&T
+- manufacturing simulation
+- electrical simulation
+- classroom dashboards
 - AI tutor
-- Multiplayer/community marketplace
-
-The product hypothesis is simpler:
-
-> Is engineering optimization fun enough that players voluntarily design, test, fail, and retry?
+- multiplayer/community marketplace
 
 ## GitHub
 
 Primary MVP epic: **#1 — Engineering Playground Mobile MVP — Flow Lab**
 
-Foundation:
+Implemented slices:
 
 - **#2** Mobile foundation and project architecture
 - **#3** Shared game-core systems and playground contract
-- **#4** Flow solver spike — real-time 2D mobile fluid simulation
-
-Playable interaction:
-
-- **#5** Flow visualization — particles, pressure, velocity, turbulence
-- **#6** Touch-first Flow editor and geometry tools
+- **#4** Flow solver spike
+- **#5** Flow visualization
+- **#6** Touch-first Flow editor
 - **#7** Challenge engine and content schema
-- **#8** Flow scoring, engineering feedback, and run telemetry
+- **#8** Flow scoring, feedback, and telemetry
+- **#9** Player progression, concept unlocks, and Learn mode
+- **#10** Flow Lab sandbox mode
 
-Next major slice: **#9 Player progression/concept unlocks + #10 Sandbox mode**, followed by authoring and tuning the launch challenge pack in **#11**.
+Next major content slice: **#11 launch challenge pack authoring/tuning**, while the discrete component work required for valves, pumps/fans, and placeable inlet/outlet geometry should be completed before calling the sandbox feature fully finished.
