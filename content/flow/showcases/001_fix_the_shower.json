@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "challenge_id": "showcase_plumbing_fix_the_shower",
+  "playground_id": "flow",
+  "title": "Fix the Shower",
+  "description": "Keep strong delivery through a constrained house-plumbing route while limiting pressure loss and unnecessary material.",
+  "difficulty": 4,
+  "presentation_mode": "explorer",
+  "starting_state": {"geometry": "default_channel"},
+  "allowed_tools": ["draw_wall", "erase", "pan"],
+  "constraints": {"max_added_solid_cells": 210},
+  "success_conditions": {"min_outlet_speed": 0.050, "max_pressure_loss": 0.026, "minimum_score": 66.0},
+  "scoring_weights": {"flow": 0.35, "pressure": 0.35, "turbulence": 0.10, "material": 0.20},
+  "concept_unlocks": ["pressure", "pressure_loss", "restriction"],
+  "hints": ["A shorter route is not always a better route if it creates a sharp restriction.", "Use the pressure view to find where energy is being lost."],
+  "rewards": {"target_scores": [66, 80, 92]},
+  "domain_config": {
+    "targets": {"outlet_speed": 0.062, "max_pressure_loss": 0.018, "max_vorticity": 0.011},
+    "showcase": {
+      "theme": "residential_plumbing",
+      "hero_label": "UPSTAIRS SHOWER",
+      "environment_labels": ["SUPPLY", "SINK", "SHOWER"],
+      "tradeoff": "delivery_vs_pressure_loss_vs_material",
+      "media_safe": true,
+      "fidelity_note": "MVP visualizes simplified 2D incompressible flow. It does not model fixture demand diversity, elevation head, pipe-network sizing, or code compliance."
+    }
+  }
+}
