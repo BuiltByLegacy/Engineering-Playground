@@ -16,6 +16,7 @@ var steps_per_tick: int = 2
 var _f := PackedFloat64Array()
 var _next := PackedFloat64Array()
 var _solid := PackedByteArray()
+var _default_solid := PackedByteArray()
 var _rho := PackedFloat64Array()
 var _ux := PackedFloat64Array()
 var _uy := PackedFloat64Array()
@@ -61,6 +62,21 @@ func set_solid(x: int, y: int, value: bool) -> void:
 		return
 	_solid[_cell(x, y)] = 1 if value else 0
 
+func get_solid_mask() -> PackedByteArray:
+	return _solid.duplicate()
+
+func apply_solid_mask(mask: PackedByteArray) -> void:
+	if mask.size() != width * height:
+		return
+	_solid = mask.duplicate()
+	_enforce_channel_edges()
+
+func restore_default_geometry() -> void:
+	if _default_solid.size() == width * height:
+		_solid = _default_solid.duplicate()
+	else:
+		_build_default_channel()
+
 func get_metrics() -> Dictionary:
 	var outlet_speed := 0.0
 	var samples := 0
@@ -96,6 +112,7 @@ func _allocate() -> void:
 	_f.resize(cells * Q)
 	_next.resize(cells * Q)
 	_solid.resize(cells)
+	_default_solid.resize(cells)
 	_rho.resize(cells)
 	_ux.resize(cells)
 	_uy.resize(cells)
@@ -103,9 +120,7 @@ func _allocate() -> void:
 
 func _build_default_channel() -> void:
 	_solid.fill(0)
-	for x in range(width):
-		_solid[_cell(x, 0)] = 1
-		_solid[_cell(x, height - 1)] = 1
+	_enforce_channel_edges()
 	var cx := int(width * 0.52)
 	var cy := int(height * 0.50)
 	var radius := max(3, int(min(width, height) * 0.11))
@@ -115,6 +130,15 @@ func _build_default_channel() -> void:
 			var dy := y - cy
 			if dx * dx + dy * dy <= radius * radius:
 				_solid[_cell(x, y)] = 1
+	_default_solid = _solid.duplicate()
+
+func _enforce_channel_edges() -> void:
+	for x in range(width):
+		_solid[_cell(x, 0)] = 1
+		_solid[_cell(x, height - 1)] = 1
+	for y in range(1, height - 1):
+		_solid[_cell(1, y)] = 0
+		_solid[_cell(width - 2, y)] = 0
 
 func _collide_and_stream() -> void:
 	_next.fill(0.0)
