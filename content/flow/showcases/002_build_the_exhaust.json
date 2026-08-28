@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "challenge_id": "showcase_exhaust_build_the_exhaust",
+  "playground_id": "flow",
+  "title": "Build the Exhaust",
+  "description": "Route a simplified exhaust path through a tight vehicle envelope while minimizing restriction, length, and turbulent losses.",
+  "difficulty": 5,
+  "presentation_mode": "explorer",
+  "starting_state": {"geometry": "default_channel"},
+  "allowed_tools": ["draw_wall", "erase", "pan"],
+  "constraints": {"max_added_solid_cells": 185},
+  "success_conditions": {"min_outlet_speed": 0.051, "max_pressure_loss": 0.028, "minimum_score": 68.0},
+  "scoring_weights": {"flow": 0.38, "pressure": 0.27, "turbulence": 0.20, "material": 0.15},
+  "concept_unlocks": ["restriction", "velocity", "recirculation"],
+  "hints": ["Tight direction changes can create a large wake and extra loss.", "A smooth transition can outperform a shorter but sharper route."],
+  "rewards": {"target_scores": [68, 82, 93]},
+  "domain_config": {
+    "targets": {"outlet_speed": 0.064, "max_pressure_loss": 0.019, "max_vorticity": 0.010},
+    "showcase": {
+      "theme": "automotive_exhaust",
+      "hero_label": "ENGINE → REAR EXIT",
+      "environment_labels": ["ENGINE", "CHASSIS", "REAR EXIT"],
+      "tradeoff": "flow_vs_packaging_vs_length",
+      "media_safe": true,
+      "fidelity_note": "MVP uses simplified 2D incompressible flow. It does not model exhaust pulses, compressibility, acoustics, scavenging, temperature, RPM, catalyst behavior, or dyno-grade power effects."
+    }
+  }
+}
