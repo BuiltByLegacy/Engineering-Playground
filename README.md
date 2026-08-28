@@ -8,7 +8,7 @@ The long-term product is **one mobile game with multiple modular playgrounds**. 
 
 ## MVP: Flow Lab
 
-Flow Lab now has three player-facing modes:
+Flow Lab has three player-facing modes:
 
 - **Challenge** — solve engineering problems, score the design, improve it, and earn progression.
 - **Sandbox** — free experimentation with the same editor, solver, and visualization stack but no objective or score.
@@ -25,6 +25,7 @@ Engineering Playground
 ├── Core
 │   ├── playground registry
 │   ├── challenge lifecycle
+│   ├── campaign catalog
 │   ├── player progression
 │   ├── concept unlocks / Learn catalog
 │   ├── scoring / telemetry
@@ -53,12 +54,15 @@ project.godot
 scenes/
   main.tscn
 content/
-  flow/challenges/
-    001_make_it_flow.json
+  flow/
+    campaign.json
+    challenges/
+      001_make_it_flow.json
 src/
   app/
     main.gd
   core/
+    campaign_catalog.gd
     challenge_definition.gd
     challenge_engine.gd
     progression_store.gd
@@ -75,7 +79,7 @@ docs/
 
 ## Current implementation
 
-The current playable slice now covers GitHub issues #2 through #10 at an implementation level:
+The current playable slice now covers the platform plus the initial 30-level Flow campaign:
 
 - mobile project shell and landscape simulation target
 - shared playground and simulation contracts
@@ -94,19 +98,45 @@ The current playable slice now covers GitHub issues #2 through #10 at an impleme
 - Learn library with discovered concepts
 - Challenge / Sandbox / Learn mode switching
 - Sandbox clean-scene reset using the same editor/solver/visualizer implementation
-- first data-driven challenge: **Make It Flow**
+- data-driven 30-level launch campaign across five chapters
+- sequential level unlocks plus chapter star gates
+- per-level replay targets for 1/2/3 stars
+- previous/next challenge navigation
+
+## Launch campaign
+
+The launch campaign contains **30 authored levels** across five chapters:
+
+1. **Make It Flow** — channels, obstacles, smooth transitions, restriction, wakes.
+2. **Pressure** — pressure loss, contractions, expansions, velocity tradeoffs.
+3. **Split It** — parallel-path and merge intuition using the current single-outlet solver as a visual proxy.
+4. **Control It** — geometry-based throttling and conditioning until true valve/pump components are implemented.
+5. **Engineer It** — simplified applied scenarios for plumbing, exhaust, HVAC, manifold intuition, packaging, and a capstone.
+
+Every level defines its own:
+
+- success thresholds
+- scoring weights
+- concept unlocks
+- hints
+- material constraint
+- 1/2/3-star replay targets
+- domain targets
+- campaign/chapter metadata
+
+Chapter progression is gated by both sequential completion and total stars, so replaying earlier levels can unlock later chapters.
+
+The campaign intentionally avoids pretending the current solver can do things it cannot. True multi-outlet balance, valve behavior, pump/fan curves, compressible exhaust pulses, and full plumbing/HVAC network analysis remain future solver/component work.
 
 ## Core game loop
 
 > **Challenge → Design → Run → Observe → Score → Learn → Modify → Retry**
 
-Passing a challenge records completion and stars, updates the best result, and unlocks concepts attached to that challenge. The first challenge currently unlocks **Flow Rate**, **Restriction**, and **Vortices & Recirculation**.
+Passing a challenge records completion and stars, updates the best result, and unlocks concepts attached to that challenge.
 
 ### Stars
 
-- **1 star:** score 60+
-- **2 stars:** score 75+
-- **3 stars:** score 90+
+Star thresholds are now **challenge-specific**. Each level carries three replay target scores rather than relying on one global 60/75/90 rule.
 
 Stars and concept discoveries persist locally without requiring an account.
 
@@ -126,12 +156,7 @@ Initial concept catalog:
 - Bernoulli Principle
 - Reynolds Number
 
-Each concept has both:
-
-- **Explorer wording** — short, intuitive language
-- **Engineer wording** — technical terminology and engineering meaning
-
-The player can switch presentation mode without duplicating challenge content.
+Each concept has both Explorer wording and Engineer wording, so the same gameplay can serve different audiences without duplicating challenge content.
 
 ## Sandbox mode
 
@@ -148,13 +173,13 @@ Current sandbox behavior:
 - clear back to a blank scene immediately
 - inspect the same live solver behavior used by Challenge mode
 
-No account is required for basic sandbox use. Save/share/community architecture can be added later without making Sandbox a separate code path.
+No account is required for basic sandbox use.
 
 Current component limitation: discrete placeable **inlets/outlets, valves, and pumps/fans** are still future Flow-editor work. The MVP sandbox currently uses the solver's fixed inlet/outlet channel boundaries plus free geometry editing.
 
 ## Scoring philosophy
 
-Engineering Playground rewards **tradeoffs**, not a single maximum value. Flow challenges can weight delivery, pressure retention, turbulence/recirculation, material usage, balance, cost, complexity, and packaging.
+Engineering Playground rewards **tradeoffs**, not a single maximum value. Current Flow levels use delivery, pressure retention, turbulence/recirculation, and material usage in different combinations.
 
 Current solver values are educational/gameplay proxies and are not presented as validated engineering analysis.
 
@@ -165,6 +190,13 @@ Top toolbar:
 - **CHALLENGE / SANDBOX / LEARN** — switch product modes
 - **DRAW / ERASE / PAN** — edit or navigate the flow workspace
 - **UNDO / REDO / RESET** — edit history and reset current mode
+
+Challenge workspace:
+
+- **PREV / NEXT** — move through unlocked campaign levels
+- chapter and level position
+- current stars, best score, total stars, and per-level star targets
+- lock reason when the next level/chapter is not yet available
 
 Bottom toolbar in Challenge/Sandbox:
 
@@ -182,7 +214,7 @@ Learn mode replaces simulation controls with the discovered-concept library and 
 3. Open `project.godot` in Godot.
 4. Run the project.
 
-The prototype opens directly into the first Flow Lab challenge. Mobile export configuration and real-device performance are still being hardened.
+The prototype opens directly into Flow Lab Challenge mode. Mobile export configuration and real-device performance are still being hardened.
 
 ## Flow solver strategy
 
@@ -221,5 +253,6 @@ Implemented slices:
 - **#8** Flow scoring, feedback, and telemetry
 - **#9** Player progression, concept unlocks, and Learn mode
 - **#10** Flow Lab sandbox mode
+- **#11** 30-level Flow Lab launch campaign authoring and campaign progression shell
 
-Next major content slice: **#11 launch challenge pack authoring/tuning**, while the discrete component work required for valves, pumps/fans, and placeable inlet/outlet geometry should be completed before calling the sandbox feature fully finished.
+Remaining #11 work is real playtesting and threshold tuning against observed solver behavior on desktop/mobile hardware. The discrete component work required for valves, pumps/fans, and placeable inlet/outlet geometry remains separate follow-up work before those mechanics become true simulation components.
