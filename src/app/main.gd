@@ -84,9 +84,12 @@ func _score_run() -> void:
 	if current_challenge == null or solver == null:
 		return
 	challenge_engine.begin_attempt()
-	last_result = challenge_engine.evaluate(Callable(FlowChallengeEvaluator, "evaluate"), {"metrics": solver.get_metrics()})
+	last_result = challenge_engine.evaluate(Callable(self, "_evaluate_challenge"), {"metrics": solver.get_metrics()})
 	telemetry.attempt_scored(current_challenge, last_result, challenge_engine.get_time_to_first_run_seconds())
 	queue_redraw()
+
+func _evaluate_challenge(challenge: EngineeringChallengeDefinition, context: Dictionary) -> Dictionary:
+	return FlowChallengeEvaluator.evaluate(challenge, context)
 
 func _handle_toolbar_tap(position: Vector2) -> bool:
 	var viewport := get_viewport_rect().size
