@@ -16,7 +16,7 @@ func record_result(challenge: EngineeringChallengeDefinition, result: Dictionary
 	var success := bool(result.get("success", false))
 	var previous_score := float(_data.get_value(id, "best_score", 0.0))
 	var previous_stars := int(_data.get_value(id, "stars", 0))
-	var stars := _stars_for_score(score) if success else previous_stars
+	var stars := _stars_for_challenge(challenge, score) if success else previous_stars
 	if success:
 		_data.set_value(id, "completed", true)
 		_data.set_value(id, "best_score", max(previous_score, score))
@@ -66,6 +66,18 @@ func total_stars() -> int:
 			continue
 		total += int(_data.get_value(section, "stars", 0))
 	return total
+
+func _stars_for_challenge(challenge: EngineeringChallengeDefinition, score: float) -> int:
+	var target_scores: Array = challenge.rewards.get("target_scores", [])
+	if target_scores.size() >= 3:
+		if score >= float(target_scores[2]):
+			return 3
+		if score >= float(target_scores[1]):
+			return 2
+		if score >= float(target_scores[0]):
+			return 1
+		return 0
+	return _stars_for_score(score)
 
 func _stars_for_score(score: float) -> int:
 	if score >= 90.0:
