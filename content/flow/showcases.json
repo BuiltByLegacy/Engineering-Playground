@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "showcases": [
-    {"id":"plumbing","title":"Fix the Shower","path":"res://content/flow/showcases/001_fix_the_shower.json","theme":"residential_plumbing"},
-    {"id":"exhaust","title":"Build the Exhaust","path":"res://content/flow/showcases/002_build_the_exhaust.json","theme":"automotive_exhaust"},
-    {"id":"hvac","title":"Balance the HVAC","path":"res://content/flow/showcases/003_balance_the_hvac.json","theme":"hvac_distribution"},
-    {"id":"manifold","title":"Design the Manifold","path":"res://content/flow/showcases/004_design_the_manifold.json","theme":"manifold_optimization"}
+    {"id":"plumbing","title":"Fix the Shower","path":"flow/showcases/001_fix_the_shower.json","theme":"residential_plumbing"},
+    {"id":"exhaust","title":"Build the Exhaust","path":"flow/showcases/002_build_the_exhaust.json","theme":"automotive_exhaust"},
+    {"id":"hvac","title":"Balance the HVAC","path":"flow/showcases/003_balance_the_hvac.json","theme":"hvac_distribution"},
+    {"id":"manifold","title":"Design the Manifold","path":"flow/showcases/004_design_the_manifold.json","theme":"manifold_optimization"}
   ]
 }
