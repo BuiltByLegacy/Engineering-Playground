@@ -23,12 +23,12 @@ namespace EngineeringPlayground.Flow.Challenges
 
     public sealed class FlowChallengeResult
     {
-        public double Score { get; init; }
-        public bool Passed { get; init; }
-        public string Grade { get; init; } = "D";
-        public int Stars { get; init; }
-        public IReadOnlyDictionary<string, double> DimensionScores { get; init; } = new Dictionary<string, double>();
-        public IReadOnlyList<string> Feedback { get; init; } = Array.Empty<string>();
+        public double Score { get; set; }
+        public bool Passed { get; set; }
+        public string Grade { get; set; } = "D";
+        public int Stars { get; set; }
+        public IReadOnlyDictionary<string, double> DimensionScores { get; set; } = new Dictionary<string, double>();
+        public IReadOnlyList<string> Feedback { get; set; } = Array.Empty<string>();
     }
 
     public static class FlowChallengeScorer
@@ -126,7 +126,8 @@ namespace EngineeringPlayground.Flow.Challenges
             var stars = 0;
             for (var i = 0; i < Math.Min(3, targets.Count); i++)
             {
-                if (score >= targets[i]!.Value<double>())
+                var target = targets[i];
+                if (target != null && score >= target.Value<double>())
                     stars = i + 1;
             }
             return Math.Max(1, stars);
