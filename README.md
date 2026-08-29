@@ -24,7 +24,7 @@ Flow Lab is built around four player-facing experiences:
 - **Challenge** — solve engineering problems, score the design, improve it, and earn progression.
 - **Sandbox** — free experimentation with the same editor, solver, and visualization stack but no objective or score.
 - **Learn** — a discovery library that reveals engineering concepts after the player encounters them in gameplay.
-- **Showcase** — applied plumbing, exhaust, HVAC, and manifold scenarios with normalized gameplay scoring plus clearly separated classical **Reference estimate** engineering math.
+- **Showcase** — applied plumbing, exhaust, HVAC, and manifold scenarios with scenario-specific solver geometry, contextual packaging overlays, normalized gameplay scoring, and clearly separated classical **Reference estimate** engineering math.
 
 The MVP deliberately prioritizes **fast, visually understandable iteration** over professional CFD accuracy.
 
@@ -36,6 +36,7 @@ Engineering Playground
 │   ├── scenes / UI
 │   ├── touch input
 │   ├── particles / field rendering
+│   ├── showcase packaging overlays
 │   ├── audio / haptics
 │   └── mobile lifecycle
 ├── Shared Game Core
@@ -89,6 +90,8 @@ Assets/
         FlowFieldVisualizer.cs
         FlowTouchEditor.cs
       Showcases/
+        FlowShowcaseGeometryPresets.cs
+        ShowcasePackagingOverlay.cs
         FlowShowcaseReferenceCatalog.cs
         FlowReferenceEstimateFormatter.cs
         FlowShowcaseSession.cs
@@ -152,15 +155,20 @@ Issue #16 now has a real source-level Unity foundation rather than only an engin
 - **Sandbox mode** using the same solver/editor/visualizer with a blank channel, no objectives, and no scoring
 - **Learn mode** with all nine retained concepts, separate Explorer/Engineer wording, browsing, and persisted presentation preference
 - **Showcase mode** with PREV/NEXT navigation across Fix the Shower, Build the Exhaust, Balance the HVAC, and Design the Manifold
+- four deterministic, resolution-relative Showcase solid-mask presets instead of a shared `default_channel`
+- scenario-specific plumbing, vehicle-underbody, HVAC-distribution, and manifold-lane geometry proxies
+- context-only UGUI packaging overlays with house, vehicle, room, and manifold cues and scenario labels
+- packaging overlays are raycast-free, hidden outside Showcase, and do not participate in solver physics
+- unknown Showcase geometry IDs fail instead of silently falling back to the default channel
 - standalone showcase challenge parsing and Unity-relative showcase content paths
 - normalized Showcase gameplay scoring kept separate from campaign progression
 - per-showcase physical assumption sets feeding the #15 classical reference-math engine
 - dedicated **Reference estimate** display for flow rate, Reynolds number, flow regime, Darcy friction factor, dynamic pressure, major loss, minor loss, and total estimated pressure loss
 - explicit player-facing warning that the dimensional result is **not a conversion of lattice units** and **not a professional engineering result**
 - temporary CHALLENGE / SANDBOX / LEARN / SHOWCASE runtime mode switching
-- EditMode regression-test source for campaign content, challenge scoring, Learn parity, Showcase parsing/path normalization, and reference-estimate finiteness/guardrails
+- EditMode regression-test source for campaign content, challenge scoring, Learn parity, Showcase parsing/path normalization, geometry-preset uniqueness/boundary safety, and reference-estimate finiteness/guardrails
 
-The bootstrap UI is migration scaffolding, not final product UX. Authored Unity scenes/prefabs should replace it after the first clean import and parity run.
+The bootstrap UI and vector-style packaging overlays are migration scaffolding, not final product art. Authored Unity scenes/prefabs should replace them after the first clean import and parity run.
 
 **Important:** source code and test definitions are committed, but a clean Unity import, Test Framework run, mobile build, and device test have not yet been recorded. Do not treat those acceptance items as passed until there is execution evidence.
 
@@ -182,6 +190,17 @@ Learn reads unlocked concept IDs directly from `PlayerProgressStore`, so Challen
 
 Showcase cycles the four applied Flow scenarios with the same solver/editor/visualizer and normalized gameplay scorer. Showcase scores do **not** write into campaign progression.
 
+The four scenarios now start from distinct solver environments:
+
+- **Fix the Shower** — `showcase_residential_plumbing`: staggered house/service-space obstacles create a constrained routing problem, with a house/floor/chase overlay and SUPPLY / SINK / UPSTAIRS SHOWER context.
+- **Build the Exhaust** — `showcase_automotive_exhaust`: floor-pan, drivetrain, and rear-suspension obstruction zones create an underbody routing problem, with ENGINE / CHASSIS / REAR EXIT context.
+- **Balance the HVAC** — `showcase_hvac_distribution`: symmetric plenum/room-side obstruction zones create a distribution proxy, with AIR HANDLER and ROOM A/B/C context.
+- **Design the Manifold** — `showcase_manifold_optimization`: a plenum obstruction plus three separators creates four visible flow passages, with INLET / OUTLET 1–4 context.
+
+The **solver mask** is the actual 2D numerical domain. The packaging overlay is only a visual explanation layer. It remains fixed while the player edits the solid mask and is never treated as a physical CFD boundary.
+
+The HVAC and manifold layouts remain educational proxies. The current LBM implementation still uses one right-side solver outlet boundary; it does not yet measure independent branch flows.
+
 Each Showcase also displays a separate **Reference estimate — Classical 1D** card. The reference card is calculated from explicit, scenario-specific physical assumptions rather than converting the 2D lattice simulation to engineering units. Current cards can show:
 
 - assumed fluid and equivalent geometry
@@ -202,8 +221,6 @@ Current assumption sets are intentionally illustrative:
 - **Build the Exhaust:** simplified steady gas reference in a 63.5 mm equivalent tube; no pulse/scavenging/acoustic/power claims.
 - **Balance the HVAC:** room-condition air through a 300 mm equivalent hydraulic diameter; not a full building duct network.
 - **Design the Manifold:** air-like single-runner reference; no independent outlet-flow or flow-bench-equivalent prediction.
-
-**Current visual limitation:** the four Showcase definitions still start from the shared `default_channel` geometry. They are now distinct in content, objectives, scoring, theme metadata, and reference assumptions, but visually distinct solver presets/packaging overlays remain follow-up work.
 
 ## Engineering-validity foundation
 
@@ -325,7 +342,8 @@ Not in the current MVP:
 5. Use **Engineering Playground → Sync Content To StreamingAssets** before manual player-build inspection; normal Unity builds also run the sync automatically.
 6. Open/run an empty scene: the temporary bootstrap creates the current Flow Lab migration workspace automatically.
 7. Use CHALLENGE / SANDBOX / LEARN / SHOWCASE to exercise the source-level mode parity.
-8. In SHOWCASE, compare the normalized visual/gameplay result with the independently calculated **Reference estimate** card; do not interpret lattice values as engineering units.
+8. In SHOWCASE, confirm each scenario loads a visibly different solid-mask layout and context overlay, then compare the normalized visual/gameplay result with the independently calculated **Reference estimate** card.
+9. Do not interpret lattice values as engineering units or packaging overlay graphics as solver boundaries.
 
 ## GitHub
 
@@ -347,4 +365,4 @@ Major implemented/design slices:
 - **#15** Flow engineering validity, reference math, and solver benchmarking
 - **#16** Unity migration — production project, Flow Lab parity, and mobile foundation
 
-#16 remains open until clean Unity import/test evidence, authored production UI, visually distinct Showcase geometry/presentation, complete touch/mobile validation, and real-device validation are recorded.
+#16 remains open until clean Unity import/test evidence, authored production UI/art, complete touch/mobile validation, and real-device validation are recorded.
