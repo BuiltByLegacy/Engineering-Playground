@@ -43,7 +43,18 @@ namespace EngineeringPlayground.Flow.Challenges
         }
 
         public bool CanGoPrevious => _index > 0;
-        public bool CanGoNext => _index + 1 < _ordered.Count && IsChapterUnlocked(_ordered[_index + 1].chapter);
+
+        public bool CanGoNext
+        {
+            get
+            {
+                if (_index + 1 >= _ordered.Count || CurrentChallenge == null)
+                    return false;
+                if (!_progress.GetChallenge(CurrentChallenge.ChallengeId).Completed)
+                    return false;
+                return IsChapterUnlocked(_ordered[_index + 1].chapter);
+            }
+        }
 
         public bool Previous()
         {
@@ -66,6 +77,14 @@ namespace EngineeringPlayground.Flow.Challenges
             var nextIndex = _ordered.FindIndex(item => string.Equals(item.challenge.ChallengeId, challengeId, StringComparison.Ordinal));
             if (nextIndex < 0 || !IsChapterUnlocked(_ordered[nextIndex].chapter))
                 return false;
+
+            if (nextIndex > _index)
+            {
+                for (var i = _index; i < nextIndex; i++)
+                    if (!_progress.GetChallenge(_ordered[i].challenge.ChallengeId).Completed)
+                        return false;
+            }
+
             _index = nextIndex;
             ApplyCurrentChallenge();
             return true;
@@ -120,6 +139,10 @@ namespace EngineeringPlayground.Flow.Challenges
         {
             if (_index + 1 >= _ordered.Count)
                 return "Campaign complete.";
+
+            if (CurrentChallenge != null && !_progress.GetChallenge(CurrentChallenge.ChallengeId).Completed)
+                return "Pass this level to unlock NEXT.";
+
             var nextChapter = _ordered[_index + 1].chapter;
             if (IsChapterUnlocked(nextChapter))
                 return string.Empty;
