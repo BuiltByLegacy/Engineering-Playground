@@ -3,6 +3,7 @@ using EngineeringPlayground.Core.Learn;
 using EngineeringPlayground.Core.Progress;
 using EngineeringPlayground.Flow.Challenges;
 using EngineeringPlayground.Flow.Runtime;
+using EngineeringPlayground.Flow.Showcases;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,7 +13,8 @@ namespace EngineeringPlayground.App
     {
         Challenge,
         Sandbox,
-        Learn
+        Learn,
+        Showcase
     }
 
     public sealed class FlowLabModeController : MonoBehaviour
@@ -20,10 +22,12 @@ namespace EngineeringPlayground.App
         private FlowLabRuntimeController _flowController;
         private FlowChallengeSession _challengeSession;
         private FlowChallengeHud _challengeHud;
+        private FlowShowcaseSession _showcaseSession;
         private GameObject _workspace;
         private Text _header;
         private Text _description;
         private Text _result;
+        private Text _reference;
         private readonly List<LearnCard> _learnCards = new();
         private int _learnIndex;
 
@@ -33,18 +37,22 @@ namespace EngineeringPlayground.App
             FlowLabRuntimeController flowController,
             FlowChallengeSession challengeSession,
             FlowChallengeHud challengeHud,
+            FlowShowcaseSession showcaseSession,
             GameObject workspace,
             Text header,
             Text description,
-            Text result)
+            Text result,
+            Text reference)
         {
             _flowController = flowController;
             _challengeSession = challengeSession;
             _challengeHud = challengeHud;
+            _showcaseSession = showcaseSession;
             _workspace = workspace;
             _header = header;
             _description = description;
             _result = result;
+            _reference = reference;
             SetMode(FlowLabMode.Challenge);
         }
 
@@ -62,6 +70,9 @@ namespace EngineeringPlayground.App
                 case FlowLabMode.Learn:
                     EnterLearn();
                     break;
+                case FlowLabMode.Showcase:
+                    EnterShowcase();
+                    break;
             }
         }
 
@@ -71,6 +82,13 @@ namespace EngineeringPlayground.App
             {
                 _challengeSession.Previous();
                 _challengeHud.Refresh();
+                return;
+            }
+
+            if (Mode == FlowLabMode.Showcase)
+            {
+                _showcaseSession.Previous();
+                RefreshShowcase();
                 return;
             }
 
@@ -90,6 +108,13 @@ namespace EngineeringPlayground.App
                 return;
             }
 
+            if (Mode == FlowLabMode.Showcase)
+            {
+                _showcaseSession.Next();
+                RefreshShowcase();
+                return;
+            }
+
             if (Mode == FlowLabMode.Learn && _learnCards.Count > 0)
             {
                 _learnIndex = (_learnIndex + 1) % _learnCards.Count;
@@ -103,6 +128,13 @@ namespace EngineeringPlayground.App
             {
                 _challengeSession.SelectChallenge(_challengeSession.CurrentChallenge.ChallengeId);
                 _challengeHud.Refresh();
+                return;
+            }
+
+            if (Mode == FlowLabMode.Showcase)
+            {
+                _showcaseSession.ResetCurrent();
+                RefreshShowcase();
                 return;
             }
 
@@ -128,6 +160,13 @@ namespace EngineeringPlayground.App
                 return;
             }
 
+            if (Mode == FlowLabMode.Showcase)
+            {
+                var scored = _showcaseSession.ScoreCurrent();
+                RefreshShowcase(scored);
+                return;
+            }
+
             if (Mode == FlowLabMode.Sandbox && _result != null)
                 _result.text = "Sandbox is score-free. Experiment, observe, and iterate without a pass/fail target.";
         }
@@ -146,6 +185,7 @@ namespace EngineeringPlayground.App
         {
             if (_workspace != null)
                 _workspace.SetActive(true);
+            ClearReference();
             _flowController.SetRunning(false);
             if (_challengeSession.CurrentChallenge != null)
                 _challengeSession.SelectChallenge(_challengeSession.CurrentChallenge.ChallengeId);
@@ -156,6 +196,7 @@ namespace EngineeringPlayground.App
         {
             if (_workspace != null)
                 _workspace.SetActive(true);
+            ClearReference();
             _flowController.SetRunning(false);
             _flowController.ClearGeometry();
             RefreshSandbox();
@@ -174,10 +215,41 @@ namespace EngineeringPlayground.App
         private void EnterLearn()
         {
             _flowController.SetRunning(false);
+            ClearReference();
             if (_workspace != null)
                 _workspace.SetActive(false);
             _learnIndex = 0;
             RefreshLearnCards();
+        }
+
+        private void EnterShowcase()
+        {
+            if (_workspace != null)
+                _workspace.SetActive(true);
+            _flowController.SetRunning(false);
+            _showcaseSession.ResetCurrent();
+            RefreshShowcase();
+        }
+
+        private void RefreshShowcase(FlowChallengeResult scored = null)
+        {
+            var entry = _showcaseSession.CurrentEntry;
+            var challenge = _showcaseSession.CurrentChallenge;
+            if (entry == null || challenge == null)
+                return;
+
+            if (_header != null)
+                _header.text = $"SHOWCASE {_showcaseSession.CurrentIndex + 1}/{_showcaseSession.ShowcaseCount} — {entry.Title}";
+            if (_description != null)
+                _description.text = $"{challenge.Description}\nTheme: {entry.Theme}. PREV/NEXT changes applied scenario; the visual solver remains normalized and qualitative/semi-quantitative.";
+            if (_result != null)
+            {
+                _result.text = scored == null
+                    ? "Run, edit, observe, then SCORE the normalized gameplay objective. The dimensional card below is an independent reference estimate."
+                    : $"{(scored.Passed ? "PASSED" : "KEEP TUNING")} · SCORE {scored.Score:F1} · GRADE {scored.Grade} · STARS {scored.Stars}/3";
+            }
+            if (_reference != null)
+                _reference.text = _showcaseSession.ReferenceEstimateText;
         }
 
         private void RefreshLearnCards()
@@ -214,7 +286,13 @@ namespace EngineeringPlayground.App
             if (_description != null)
                 _description.text = card.Body;
             if (_result != null)
-                _result.text = $"Concept {_learnIndex + 1}/{_learnCards.Count}  ·  Presentation: {mode}  ·  PREV/NEXT browse concepts  ·  MODE changes explanation depth.";
+                _result.text = $"Concept {_learnIndex + 1}/{_learnCards.Count} · Presentation: {mode} · PREV/NEXT browse concepts · MODE changes explanation depth.";
+        }
+
+        private void ClearReference()
+        {
+            if (_reference != null)
+                _reference.text = string.Empty;
         }
     }
 }
