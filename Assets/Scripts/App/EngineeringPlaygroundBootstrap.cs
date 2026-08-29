@@ -56,11 +56,22 @@ namespace EngineeringPlayground.App
             var editor = workspaceObject.GetComponent<FlowTouchEditor>();
             editor.Configure(controller, workspaceRect);
 
+            var overlayObject = new GameObject("Showcase Packaging Overlay", typeof(RectTransform), typeof(ShowcasePackagingOverlay));
+            overlayObject.transform.SetParent(workspaceObject.transform, false);
+            var overlayRect = overlayObject.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = Vector2.zero;
+            overlayRect.offsetMax = Vector2.zero;
+            var showcaseOverlay = overlayObject.GetComponent<ShowcasePackagingOverlay>();
+            showcaseOverlay.Configure(showcaseSession);
+            showcaseOverlay.SetVisible(false);
+
             var hud = root.AddComponent<FlowChallengeHud>();
             hud.Configure(challengeSession, header, description, result);
 
             var modeController = root.AddComponent<FlowLabModeController>();
-            modeController.Configure(controller, challengeSession, hud, showcaseSession, workspaceObject, header, description, result, reference);
+            modeController.Configure(controller, challengeSession, hud, showcaseSession, showcaseOverlay, workspaceObject, header, description, result, reference);
 
             CreateModeBar(canvasObject.transform, modeController);
             CreateNavigationBar(canvasObject.transform, modeController);
