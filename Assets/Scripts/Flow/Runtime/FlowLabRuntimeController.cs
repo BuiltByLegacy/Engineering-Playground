@@ -50,7 +50,11 @@ namespace EngineeringPlayground.Flow.Runtime
 
         public void ClearGeometry()
         {
+            if (Solver == null)
+                return;
+
             Solver.ClearInteriorSolids();
+            Solver.Reset();
             SolverUpdated?.Invoke();
         }
 
@@ -64,6 +68,7 @@ namespace EngineeringPlayground.Flow.Runtime
                 (int)(width * 0.52),
                 height / 2,
                 Math.Max(3, (int)(Math.Min(width, height) * 0.11)));
+            Solver.Reset();
             SolverUpdated?.Invoke();
         }
 
