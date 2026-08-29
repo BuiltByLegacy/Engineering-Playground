@@ -30,6 +30,53 @@ namespace EngineeringPlayground.Tests.EditMode
         }
 
         [Test]
+        public void ShowcaseDefinitions_UseFourDedicatedGeometryPresets()
+        {
+            var manifest = ContentRepository.LoadFlowShowcases();
+            var geometryIds = manifest.Showcases
+                .Select(entry => ContentRepository.LoadChallenge(entry.Path).StartingState.Value<string>("geometry"))
+                .ToArray();
+
+            Assert.That(geometryIds, Has.None.EqualTo("default_channel"));
+            Assert.That(geometryIds.Distinct().Count(), Is.EqualTo(4));
+            CollectionAssert.AreEquivalent(FlowShowcaseGeometryPresets.AllIds, geometryIds);
+        }
+
+        [Test]
+        public void GeometryPresets_AreDistinctAndPreserveOpenInletOutletColumns()
+        {
+            const int width = 96;
+            const int height = 54;
+            var masks = FlowShowcaseGeometryPresets.AllIds
+                .Select(id => FlowShowcaseGeometryPresets.Build(id, width, height))
+                .ToArray();
+
+            for (var i = 0; i < masks.Length; i++)
+            {
+                var mask = masks[i];
+                Assert.That(mask.Count(value => value), Is.GreaterThan(width * 2), FlowShowcaseGeometryPresets.AllIds[i]);
+
+                for (var y = 1; y < height - 1; y++)
+                {
+                    Assert.That(mask[y * width + 1], Is.False, FlowShowcaseGeometryPresets.AllIds[i]);
+                    Assert.That(mask[y * width + width - 2], Is.False, FlowShowcaseGeometryPresets.AllIds[i]);
+                }
+            }
+
+            for (var a = 0; a < masks.Length; a++)
+            for (var b = a + 1; b < masks.Length; b++)
+                Assert.That(masks[a].SequenceEqual(masks[b]), Is.False,
+                    $"{FlowShowcaseGeometryPresets.AllIds[a]} and {FlowShowcaseGeometryPresets.AllIds[b]} should not share a mask.");
+        }
+
+        [Test]
+        public void UnknownShowcaseGeometry_IsRejected()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                FlowShowcaseGeometryPresets.Build("showcase_typo", 96, 54));
+        }
+
+        [Test]
         public void AllReferenceAssumptions_ProduceFinitePositiveEngineeringResults()
         {
             foreach (var assumption in FlowShowcaseReferenceCatalog.All)
