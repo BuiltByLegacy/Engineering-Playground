@@ -8,12 +8,13 @@ The long-term product is **one mobile game with multiple modular playgrounds**. 
 
 ## Production engine
 
-**Unity + C# is the production stack.**
+**Unity 6.3 LTS + C# is the production stack.**
 
-The earlier Godot/GDScript implementation is retained temporarily as a prototype/reference during migration, but new production feature work should target Unity.
+The repository is currently pinned to **Unity 6000.3.18f1** for the initial production migration. The earlier Godot/GDScript implementation is retained temporarily as prototype/reference material and should not receive new production features.
 
 See:
 - [`docs/ADR-002-unity-engine.md`](docs/ADR-002-unity-engine.md)
+- [`docs/UNITY_MIGRATION.md`](docs/UNITY_MIGRATION.md)
 - [`docs/ADR-001-mobile-stack.md`](docs/ADR-001-mobile-stack.md) — superseded engine decision
 
 ## MVP: Flow Lab
@@ -59,16 +60,35 @@ Numerical truth should live in plain C# where practical, separate from Unity ren
 
 ```text
 Assets/
+  Editor/
+    EngineeringContentSync.cs
   Scripts/
+    App/
+      EngineeringPlaygroundBootstrap.cs
+    Core/
+      Content/
+        ContentModels.cs
+        CampaignCatalog.cs
+        ContentRepository.cs
+      Progress/
+        PlayerProgressStore.cs
     Flow/
       Engineering/
         FlowEngineeringReferenceModel.cs
+      Runtime/
+        FlowLabRuntimeController.cs
+        FlowFieldVisualizer.cs
+        FlowTouchEditor.cs
       Simulation/
         D2Q9LbmSolver.cs
   Tests/
     EditMode/
       FlowEngineeringReferenceModelTests.cs
       D2Q9LbmSolverTests.cs
+      ContentMigrationTests.cs
+
+Packages/
+ProjectSettings/
 
 content/
   flow/
@@ -79,6 +99,7 @@ content/
 
 docs/
   ADR-002-unity-engine.md
+  UNITY_MIGRATION.md
   FLOW_ENGINEERING_VALIDITY.md
   FLOW_BENCHMARKS.md
   FLOW_SHOWCASES.md
@@ -89,11 +110,37 @@ scenes/
 src/**/*.gd
 ```
 
-## Current implementation status
+## Current Unity production slice
 
-### Unity production foundation
+Issue #16 now has a real source-level Unity foundation rather than only an engine decision:
 
-Issue #15 now establishes the first Unity/C# engineering-validity foundation:
+- Unity 6.3 LTS project structure and version pin
+- iOS/Android-oriented PlayerSettings source
+- Input System, Newtonsoft JSON, Unity Test Framework, and UGUI packages
+- preserved JSON campaign/challenge models
+- schema validation and duplicate-ID checks
+- root-content loading in Editor
+- build-time synchronization into `StreamingAssets`
+- regression test source asserting 30 campaign challenges and four showcase definitions
+- PlayerPrefs-backed local progression, stars, best score/grade, concepts, and Explorer/Engineer preference
+- plain-C# D2Q9 solver from #15
+- Unity runtime solver controller
+- finite-state and low-Mach runtime guardrails
+- editable solid masks
+- Flow / speed / pressure / vorticity field visualization
+- draw / erase / pan interaction
+- interpolated brush strokes
+- undo / redo
+- clear / reset / run-pause controls
+- temporary runtime bootstrap that creates a Flow workspace and toolbar without requiring a hand-authored migration scene
+
+The bootstrap UI is migration scaffolding, not final product UX. Authored Unity scenes/prefabs should replace it after the first clean import and parity run.
+
+**Important:** source code and test definitions are committed, but a clean Unity import, Test Framework run, mobile build, and device test have not yet been recorded. Do not treat those acceptance items as passed until there is execution evidence.
+
+## Engineering-validity foundation
+
+Issue #15 establishes the mathematical credibility layer:
 
 - engine-independent C# reference-math model
 - continuity / mass-flow calculations
@@ -105,34 +152,16 @@ Issue #15 now establishes the first Unity/C# engineering-validity foundation:
 - laminar `64/Re` friction factor
 - Haaland turbulent friction-factor approximation
 - invalid-input guardrails
-- Unity EditMode test coverage for the equations
+- Unity EditMode test source for the equations
 - Unity-ready CPU D2Q9 LBM baseline in plain C#
 - low-Mach guardrail
 - BGK relaxation-parameter validation
 - mass-flux error measurement
 - finiteness detection
 - vorticity and outlet-speed benchmark metrics
-- initial solver regression tests
 - benchmark matrix and validity-tier documentation
 
 See [`docs/FLOW_ENGINEERING_VALIDITY.md`](docs/FLOW_ENGINEERING_VALIDITY.md) and [`docs/FLOW_BENCHMARKS.md`](docs/FLOW_BENCHMARKS.md).
-
-### Existing gameplay/content prototype
-
-The earlier prototype already demonstrated the product systems and content direction:
-
-- live particle, velocity, pressure, and swirl visualization
-- touch draw/erase/pan plus pinch zoom
-- undo/redo and reset
-- versioned JSON challenge schema
-- reusable challenge lifecycle
-- multi-objective Flow scoring and engineering feedback
-- progression, grades, stars, and concept unlocks
-- Challenge / Sandbox / Learn / Showcase concepts
-- 30-level launch campaign across five chapters
-- four real-world showcase scenarios
-
-These systems now need to migrate into Unity rather than receive additional Godot-specific production work.
 
 ## Launch campaign
 
@@ -161,34 +190,17 @@ The current educational model intentionally does **not** claim true plumbing-net
 
 Flow Lab uses two related but distinct layers.
 
-### 1. Visual simulation
+### Visual simulation
 
-D2Q9 Lattice Boltzmann simulation provides:
-- geometry-driven flow behavior
-- velocity-field response
-- wakes
-- restrictions
-- recirculation/vorticity
-- pressure-like qualitative field behavior
+D2Q9 Lattice Boltzmann simulation provides geometry-driven flow behavior, velocity-field response, wakes, restrictions, recirculation/vorticity, and pressure-like qualitative field behavior.
 
 The CPU C# implementation is the correctness baseline. Future Burst/Jobs or compute-shader versions must match benchmark trends before replacing it.
 
-### 2. Engineering reference math
+### Engineering reference math
 
 Dimensional results come from explicit assumptions and classical equations, not silent conversion of lattice units.
 
-Reference cards can show:
-- fluid assumptions
-- hydraulic diameter
-- velocity
-- flow rate
-- Reynolds number
-- flow regime
-- friction factor
-- dynamic pressure
-- major loss
-- minor loss
-- total estimated pressure loss
+Reference cards can show fluid assumptions, hydraulic diameter, velocity, flow rate, Reynolds number, flow regime, friction factor, dynamic pressure, major loss, minor loss, and total estimated pressure loss.
 
 Player-facing dimensional values should be labeled **Reference estimate** unless a case has been explicitly calibrated and benchmarked.
 
@@ -198,15 +210,11 @@ Player-facing dimensional values should be labeled **Reference estimate** unless
 - **Semi-quantitative** — normalized/trend metrics that pass regression testing.
 - **Benchmarked quantitative reference** — dimensional classical calculations or explicitly calibrated solver outputs.
 
-This distinction is central to the product: the game should look and behave like engineering without pretending to be a certification-grade CFD tool.
-
 ## Core game loop
 
 > **Challenge → Design → Run → Observe → Score → Learn → Modify → Retry**
 
 ## Flow solver strategy
-
-The first solver remains a **D2Q9 Lattice Boltzmann Method** baseline because it maps naturally to a grid, handles interactive obstacles well, and exposes fields useful for game visualization.
 
 Production strategy:
 
@@ -241,13 +249,22 @@ Not in the current MVP:
 - AI tutor
 - multiplayer/community marketplace
 
+## Running the Unity migration locally
+
+1. Install **Unity 6.3 LTS / 6000.3.18f1** in Unity Hub.
+2. Add this repository as a Unity project.
+3. Allow packages and scripts to import.
+4. Run EditMode tests before accepting numerical/content parity.
+5. Use **Engineering Playground → Sync Content To StreamingAssets** before manual player-build inspection; normal Unity builds also run the sync automatically.
+6. Open/run an empty scene: the temporary bootstrap creates the current Flow Lab migration workspace automatically.
+
 ## GitHub
 
 Primary MVP epic: **#1 — Engineering Playground Mobile MVP — Flow Lab**
 
 Major implemented/design slices:
 
-- **#2** Mobile foundation and architecture — original prototype decision now superseded by Unity ADR
+- **#2** Mobile foundation and architecture — original prototype decision superseded by Unity ADR
 - **#3** Shared game-core systems and playground contract
 - **#4** Flow solver spike
 - **#5** Flow visualization
@@ -258,6 +275,7 @@ Major implemented/design slices:
 - **#10** Flow Lab sandbox mode
 - **#11** 30-level Flow Lab launch campaign
 - **#12** Applied Flow showcases
-- **#15** Flow engineering validity, reference math, and solver benchmarking — Unity/C# production foundation
+- **#15** Flow engineering validity, reference math, and solver benchmarking
+- **#16** Unity migration — production project, Flow Lab parity, and mobile foundation
 
-The next broad engineering task is migration of the retained prototype systems into the Unity project while preserving their challenge/content semantics and numerical guardrails.
+#16 remains open until Unity import/test evidence, full Challenge/Sandbox/Learn/Showcase parity, authored production UI, and real-device validation are complete.
