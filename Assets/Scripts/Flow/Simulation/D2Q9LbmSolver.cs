@@ -88,6 +88,24 @@ namespace EngineeringPlayground.Flow.Simulation
             EnforceChannelEdges();
         }
 
+        public bool[] GetSolidMaskCopy()
+        {
+            var copy = new bool[_solid.Length];
+            Array.Copy(_solid, copy, _solid.Length);
+            return copy;
+        }
+
+        public void ApplySolidMask(bool[] mask, bool reset = true)
+        {
+            if (mask == null) throw new ArgumentNullException(nameof(mask));
+            if (mask.Length != _solid.Length)
+                throw new ArgumentException("Solid mask size does not match solver grid.", nameof(mask));
+
+            Array.Copy(mask, _solid, _solid.Length);
+            EnforceChannelEdges();
+            if (reset) Reset();
+        }
+
         public void ClearInteriorSolids()
         {
             Array.Fill(_solid, false);
@@ -190,6 +208,16 @@ namespace EngineeringPlayground.Flow.Simulation
                 }
             }
             return count == 0 ? 0.0 : sum / count;
+        }
+
+        public double VorticityAt(int x, int y)
+        {
+            if (x <= 0 || x >= Width - 1 || y <= 0 || y >= Height - 1) return 0.0;
+            var c = Cell(x, y);
+            if (_solid[c]) return 0.0;
+            var dvDx = 0.5 * (_uy[Cell(x + 1, y)] - _uy[Cell(x - 1, y)]);
+            var duDy = 0.5 * (_ux[Cell(x, y + 1)] - _ux[Cell(x, y - 1)]);
+            return dvDx - duDy;
         }
 
         public bool IsFinite()
