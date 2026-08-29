@@ -6,7 +6,7 @@
   "description": "Keep strong delivery through a constrained house-plumbing route while limiting pressure loss and unnecessary material.",
   "difficulty": 4,
   "presentation_mode": "explorer",
-  "starting_state": {"geometry": "default_channel"},
+  "starting_state": {"geometry": "showcase_residential_plumbing"},
   "allowed_tools": ["draw_wall", "erase", "pan"],
   "constraints": {"max_added_solid_cells": 210},
   "success_conditions": {"min_outlet_speed": 0.050, "max_pressure_loss": 0.026, "minimum_score": 66.0},
@@ -22,7 +22,7 @@
       "environment_labels": ["SUPPLY", "SINK", "SHOWER"],
       "tradeoff": "delivery_vs_pressure_loss_vs_material",
       "media_safe": true,
-      "fidelity_note": "MVP visualizes simplified 2D incompressible flow. It does not model fixture demand diversity, elevation head, pipe-network sizing, or code compliance."
+      "fidelity_note": "MVP visualizes simplified 2D incompressible flow through a house-packaging proxy. It does not model fixture demand diversity, elevation head, pipe-network sizing, or code compliance."
     }
   }
 }
