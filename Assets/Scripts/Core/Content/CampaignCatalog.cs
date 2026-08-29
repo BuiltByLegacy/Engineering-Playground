@@ -27,6 +27,15 @@ namespace EngineeringPlayground.Core.Content
             return campaign;
         }
 
+        public static ChallengeDefinition ParseChallenge(string json)
+        {
+            var challenge = JsonConvert.DeserializeObject<ChallengeDefinition>(json);
+            if (challenge == null)
+                throw new InvalidDataException("Challenge JSON deserialized to null.");
+            ValidateChallenge(challenge);
+            return challenge;
+        }
+
         public static ChallengeDefinition FindChallenge(CampaignDefinition campaign, string challengeId)
         {
             return campaign.Chapters.SelectMany(c => c.Challenges)
@@ -37,7 +46,7 @@ namespace EngineeringPlayground.Core.Content
         public static int ChallengeCount(CampaignDefinition campaign) =>
             campaign.Chapters.Sum(c => c.Challenges.Count);
 
-        private static void ValidateChallenge(ChallengeDefinition challenge)
+        public static void ValidateChallenge(ChallengeDefinition challenge)
         {
             if (challenge.SchemaVersion != 1)
                 throw new InvalidDataException($"{challenge.ChallengeId}: unsupported schema_version {challenge.SchemaVersion}.");
