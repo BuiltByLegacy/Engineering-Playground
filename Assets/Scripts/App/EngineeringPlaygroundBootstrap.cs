@@ -32,17 +32,17 @@ namespace EngineeringPlayground.App
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
-            var header = CreateText(canvasObject.transform, "Challenge Header", new Vector2(0.04f, 0.935f), new Vector2(0.96f, 0.99f), 28, TextAnchor.MiddleLeft);
-            var description = CreateText(canvasObject.transform, "Challenge Description", new Vector2(0.04f, 0.855f), new Vector2(0.96f, 0.935f), 20, TextAnchor.UpperLeft);
-            var result = CreateText(canvasObject.transform, "Challenge Result", new Vector2(0.04f, 0.755f), new Vector2(0.96f, 0.855f), 20, TextAnchor.UpperLeft);
+            var header = CreateText(canvasObject.transform, "Primary Header", new Vector2(0.04f, 0.945f), new Vector2(0.96f, 0.99f), 28, TextAnchor.MiddleLeft);
+            var description = CreateText(canvasObject.transform, "Primary Description", new Vector2(0.04f, 0.82f), new Vector2(0.96f, 0.89f), 20, TextAnchor.UpperLeft);
+            var result = CreateText(canvasObject.transform, "Primary Result", new Vector2(0.04f, 0.74f), new Vector2(0.96f, 0.82f), 20, TextAnchor.UpperLeft);
 
             var workspaceObject = new GameObject("Flow Workspace", typeof(RectTransform), typeof(RawImage), typeof(FlowFieldVisualizer), typeof(FlowTouchEditor));
             workspaceObject.transform.SetParent(canvasObject.transform, false);
-            var rect = workspaceObject.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.04f, 0.13f);
-            rect.anchorMax = new Vector2(0.96f, 0.75f);
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+            var workspaceRect = workspaceObject.GetComponent<RectTransform>();
+            workspaceRect.anchorMin = new Vector2(0.04f, 0.16f);
+            workspaceRect.anchorMax = new Vector2(0.96f, 0.735f);
+            workspaceRect.offsetMin = Vector2.zero;
+            workspaceRect.offsetMax = Vector2.zero;
 
             var rawImage = workspaceObject.GetComponent<RawImage>();
             rawImage.raycastTarget = true;
@@ -51,12 +51,17 @@ namespace EngineeringPlayground.App
             visualizer.Configure(controller, rawImage);
 
             var editor = workspaceObject.GetComponent<FlowTouchEditor>();
-            editor.Configure(controller, rect);
+            editor.Configure(controller, workspaceRect);
 
             var hud = root.AddComponent<FlowChallengeHud>();
             hud.Configure(challengeSession, header, description, result);
 
-            CreateToolbar(canvasObject.transform, controller, visualizer, editor, challengeSession, hud);
+            var modeController = root.AddComponent<FlowLabModeController>();
+            modeController.Configure(controller, challengeSession, hud, workspaceObject, header, description, result);
+
+            CreateModeBar(canvasObject.transform, modeController);
+            CreateNavigationBar(canvasObject.transform, modeController);
+            CreateToolBar(canvasObject.transform, visualizer, editor);
         }
 
         private static void EnsureEventSystem()
@@ -68,22 +73,28 @@ namespace EngineeringPlayground.App
             Object.DontDestroyOnLoad(eventSystem);
         }
 
-        private static void CreateToolbar(Transform parent, FlowLabRuntimeController controller, FlowFieldVisualizer visualizer, FlowTouchEditor editor, FlowChallengeSession challengeSession, FlowChallengeHud hud)
+        private static void CreateModeBar(Transform parent, FlowLabModeController modeController)
         {
-            var bar = new GameObject("Toolbar", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            bar.transform.SetParent(parent, false);
-            var rect = bar.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.04f, 0.015f);
-            rect.anchorMax = new Vector2(0.96f, 0.115f);
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+            var bar = CreateBar(parent, "Mode Bar", new Vector2(0.04f, 0.895f), new Vector2(0.96f, 0.94f), 10f);
+            AddButton(bar.transform, "CHALLENGE", () => modeController.SetMode(FlowLabMode.Challenge));
+            AddButton(bar.transform, "SANDBOX", () => modeController.SetMode(FlowLabMode.Sandbox));
+            AddButton(bar.transform, "LEARN", () => modeController.SetMode(FlowLabMode.Learn));
+            AddButton(bar.transform, "MODE", modeController.TogglePresentationMode);
+        }
 
-            var layout = bar.GetComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8f;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
+        private static void CreateNavigationBar(Transform parent, FlowLabModeController modeController)
+        {
+            var bar = CreateBar(parent, "Navigation Bar", new Vector2(0.04f, 0.09f), new Vector2(0.96f, 0.15f), 10f);
+            AddButton(bar.transform, "PREV", modeController.Previous);
+            AddButton(bar.transform, "RESET", modeController.Reset);
+            AddButton(bar.transform, "RUN / PAUSE", modeController.ToggleRunning);
+            AddButton(bar.transform, "SCORE", modeController.Score);
+            AddButton(bar.transform, "NEXT", modeController.Next);
+        }
 
-            AddButton(bar.transform, "PREV", () => { challengeSession.Previous(); hud.Refresh(); });
+        private static void CreateToolBar(Transform parent, FlowFieldVisualizer visualizer, FlowTouchEditor editor)
+        {
+            var bar = CreateBar(parent, "Tool Bar", new Vector2(0.04f, 0.015f), new Vector2(0.96f, 0.08f), 8f);
             AddButton(bar.transform, "DRAW", () => editor.SetTool(FlowEditorTool.Draw));
             AddButton(bar.transform, "ERASE", () => editor.SetTool(FlowEditorTool.Erase));
             AddButton(bar.transform, "PAN", () => editor.SetTool(FlowEditorTool.Pan));
@@ -93,10 +104,23 @@ namespace EngineeringPlayground.App
             AddButton(bar.transform, "SPEED", () => visualizer.SetViewMode(FlowViewMode.Velocity));
             AddButton(bar.transform, "PRESS", () => visualizer.SetViewMode(FlowViewMode.Pressure));
             AddButton(bar.transform, "SWIRL", () => visualizer.SetViewMode(FlowViewMode.Vorticity));
-            AddButton(bar.transform, "RESET", () => challengeSession.SelectChallenge(challengeSession.CurrentChallenge.ChallengeId));
-            AddButton(bar.transform, "RUN / PAUSE", controller.ToggleRunning);
-            AddButton(bar.transform, "SCORE", () => challengeSession.ScoreCurrent());
-            AddButton(bar.transform, "NEXT", () => { challengeSession.Next(); hud.Refresh(); });
+        }
+
+        private static GameObject CreateBar(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, float spacing)
+        {
+            var bar = new GameObject(name, typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            bar.transform.SetParent(parent, false);
+            var rect = bar.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var layout = bar.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = spacing;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+            return bar;
         }
 
         private static Text CreateText(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, int fontSize, TextAnchor alignment)
