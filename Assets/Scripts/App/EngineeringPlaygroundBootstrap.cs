@@ -1,5 +1,6 @@
 using EngineeringPlayground.Flow.Challenges;
 using EngineeringPlayground.Flow.Runtime;
+using EngineeringPlayground.Flow.Showcases;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -21,6 +22,7 @@ namespace EngineeringPlayground.App
             Object.DontDestroyOnLoad(root);
             var controller = root.AddComponent<FlowLabRuntimeController>();
             var challengeSession = root.AddComponent<FlowChallengeSession>();
+            var showcaseSession = root.AddComponent<FlowShowcaseSession>();
 
             var canvasObject = new GameObject("Flow Lab Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasObject.transform.SetParent(root.transform, false);
@@ -34,13 +36,14 @@ namespace EngineeringPlayground.App
 
             var header = CreateText(canvasObject.transform, "Primary Header", new Vector2(0.04f, 0.945f), new Vector2(0.96f, 0.99f), 28, TextAnchor.MiddleLeft);
             var description = CreateText(canvasObject.transform, "Primary Description", new Vector2(0.04f, 0.82f), new Vector2(0.96f, 0.89f), 20, TextAnchor.UpperLeft);
-            var result = CreateText(canvasObject.transform, "Primary Result", new Vector2(0.04f, 0.74f), new Vector2(0.96f, 0.82f), 20, TextAnchor.UpperLeft);
+            var result = CreateText(canvasObject.transform, "Primary Result", new Vector2(0.04f, 0.745f), new Vector2(0.96f, 0.82f), 20, TextAnchor.UpperLeft);
+            var reference = CreateText(canvasObject.transform, "Reference Estimate", new Vector2(0.04f, 0.585f), new Vector2(0.96f, 0.735f), 16, TextAnchor.UpperLeft);
 
             var workspaceObject = new GameObject("Flow Workspace", typeof(RectTransform), typeof(RawImage), typeof(FlowFieldVisualizer), typeof(FlowTouchEditor));
             workspaceObject.transform.SetParent(canvasObject.transform, false);
             var workspaceRect = workspaceObject.GetComponent<RectTransform>();
             workspaceRect.anchorMin = new Vector2(0.04f, 0.16f);
-            workspaceRect.anchorMax = new Vector2(0.96f, 0.735f);
+            workspaceRect.anchorMax = new Vector2(0.96f, 0.575f);
             workspaceRect.offsetMin = Vector2.zero;
             workspaceRect.offsetMax = Vector2.zero;
 
@@ -57,7 +60,7 @@ namespace EngineeringPlayground.App
             hud.Configure(challengeSession, header, description, result);
 
             var modeController = root.AddComponent<FlowLabModeController>();
-            modeController.Configure(controller, challengeSession, hud, workspaceObject, header, description, result);
+            modeController.Configure(controller, challengeSession, hud, showcaseSession, workspaceObject, header, description, result, reference);
 
             CreateModeBar(canvasObject.transform, modeController);
             CreateNavigationBar(canvasObject.transform, modeController);
@@ -79,6 +82,7 @@ namespace EngineeringPlayground.App
             AddButton(bar.transform, "CHALLENGE", () => modeController.SetMode(FlowLabMode.Challenge));
             AddButton(bar.transform, "SANDBOX", () => modeController.SetMode(FlowLabMode.Sandbox));
             AddButton(bar.transform, "LEARN", () => modeController.SetMode(FlowLabMode.Learn));
+            AddButton(bar.transform, "SHOWCASE", () => modeController.SetMode(FlowLabMode.Showcase));
             AddButton(bar.transform, "MODE", modeController.TogglePresentationMode);
         }
 
