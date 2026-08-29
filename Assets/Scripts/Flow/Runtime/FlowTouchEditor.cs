@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using EngineeringPlayground.Flow.Simulation;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -26,6 +25,12 @@ namespace EngineeringPlayground.Flow.Runtime
         private readonly Stack<bool[]> _redo = new();
         private bool _editing;
         private Vector2Int? _lastCell;
+
+        public void Configure(FlowLabRuntimeController runtimeController, RectTransform workspaceRect)
+        {
+            controller = runtimeController;
+            workspace = workspaceRect;
+        }
 
         private void Awake()
         {
