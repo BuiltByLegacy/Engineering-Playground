@@ -6,7 +6,7 @@
   "description": "Create a compact, low-loss flow path that promotes even distribution through a constrained manifold envelope.",
   "difficulty": 5,
   "presentation_mode": "explorer",
-  "starting_state": {"geometry": "default_channel"},
+  "starting_state": {"geometry": "showcase_manifold_optimization"},
   "allowed_tools": ["draw_wall", "erase", "pan"],
   "constraints": {"max_added_solid_cells": 175},
   "success_conditions": {"min_outlet_speed": 0.050, "max_pressure_loss": 0.026, "minimum_score": 70.0},
@@ -22,7 +22,7 @@
       "environment_labels": ["INLET", "OUTLET 1", "OUTLET 2", "OUTLET 3", "OUTLET 4"],
       "tradeoff": "uniformity_vs_pressure_loss_vs_packaging",
       "media_safe": true,
-      "fidelity_note": "MVP does not yet calculate independent branch flow rates or a true four-outlet balance percentage. It uses 2D symmetry, wake, pressure-loss, and material proxies until multi-outlet measurement is implemented."
+      "fidelity_note": "MVP uses a four-lane manifold packaging proxy but still has one solver outlet boundary. It does not yet calculate independent branch flow rates or a true four-outlet balance percentage."
     }
   }
 }
