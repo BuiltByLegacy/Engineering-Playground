@@ -7,6 +7,7 @@ namespace EngineeringPlayground.Core.Content
     {
         public static string Resolve(string relativePath)
         {
+            relativePath = ShowcaseCatalog.NormalizeContentPath(relativePath);
             if (Application.isEditor)
                 return Path.GetFullPath(Path.Combine(Application.dataPath, "..", "content", relativePath));
 
@@ -15,6 +16,7 @@ namespace EngineeringPlayground.Core.Content
 
         public static string ReadText(string relativePath)
         {
+            relativePath = ShowcaseCatalog.NormalizeContentPath(relativePath);
             var path = Resolve(relativePath);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Engineering Playground content not found: {relativePath}", path);
@@ -23,5 +25,11 @@ namespace EngineeringPlayground.Core.Content
 
         public static CampaignDefinition LoadFlowCampaign() =>
             CampaignCatalog.Parse(ReadText("flow/campaign.json"));
+
+        public static ShowcaseManifest LoadFlowShowcases() =>
+            ShowcaseCatalog.Parse(ReadText("flow/showcases.json"));
+
+        public static ChallengeDefinition LoadChallenge(string relativePath) =>
+            CampaignCatalog.ParseChallenge(ReadText(relativePath));
     }
 }
