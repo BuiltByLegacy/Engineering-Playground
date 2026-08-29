@@ -72,6 +72,15 @@ namespace EngineeringPlayground.Flow.Runtime
             SolverUpdated?.Invoke();
         }
 
+        public void ApplySolidMask(bool[] mask)
+        {
+            if (Solver == null)
+                return;
+
+            Solver.ApplySolidMask(mask, true);
+            SolverUpdated?.Invoke();
+        }
+
         public void SetSolid(int x, int y, bool solid)
         {
             Solver.SetSolid(x, y, solid);
