@@ -19,6 +19,7 @@ namespace EngineeringPlayground.Flow.Showcases
         public FlowChallengeResult LastResult { get; private set; }
         public int CurrentIndex => _index;
         public int ShowcaseCount => _manifest?.Showcases.Count ?? 0;
+        public string CurrentGeometryId => CurrentChallenge?.StartingState.Value<string>("geometry") ?? "default_channel";
         public string ReferenceEstimateText => CurrentEntry == null
             ? string.Empty
             : FlowReferenceEstimateFormatter.Format(FlowShowcaseReferenceCatalog.Get(CurrentEntry.Id));
@@ -76,11 +77,24 @@ namespace EngineeringPlayground.Flow.Showcases
                 return;
 
             CurrentChallenge = ContentRepository.LoadChallenge(CurrentEntry.Path);
-            var geometry = CurrentChallenge.StartingState.Value<string>("geometry") ?? "default_channel";
+            var geometry = CurrentGeometryId;
+
             if (geometry == "blank_channel")
+            {
                 flowController.ClearGeometry();
-            else
+            }
+            else if (geometry == "default_channel")
+            {
                 flowController.RestoreDefaultChallengeGeometry();
+            }
+            else
+            {
+                var mask = FlowShowcaseGeometryPresets.Build(
+                    geometry,
+                    flowController.Solver.Width,
+                    flowController.Solver.Height);
+                flowController.ApplySolidMask(mask);
+            }
 
             flowController.SetRunning(false);
             _baselineSolidCells = CountSolidCells();
