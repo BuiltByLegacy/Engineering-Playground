@@ -27,18 +27,33 @@ jobs:
     needs: smoke
     env:
       UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-    if: ${{ env.UNITY_LICENSE != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
+      - name: Detect Unity license
+        id: license
+        shell: bash
+        run: |
+          if [ -n "$UNITY_LICENSE" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Explain skipped Unity execution
+        if: steps.license.outputs.available != 'true'
+        run: |
+          echo "UNITY_LICENSE is not configured."
+          echo "License-free content smoke validation passed, but Unity import/EditMode execution remains blocked."
       - uses: actions/cache@v4
+        if: steps.license.outputs.available == 'true'
         with:
           path: Library
           key: Library-${{ runner.os }}-6000.3.18f1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json') }}
           restore-keys: |
             Library-${{ runner.os }}-6000.3.18f1-
       - name: Run Unity EditMode tests
+        if: steps.license.outputs.available == 'true'
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -49,25 +64,9 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Unity EditMode Tests
       - name: Upload Unity test artifacts
-        if: always()
+        if: always() && steps.license.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: unity-editmode-results
           path: artifacts/editmode
           if-no-files-found: warn
-
-  unity-license-status:
-    name: Unity license status
-    runs-on: ubuntu-latest
-    needs: smoke
-    env:
-      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-    steps:
-      - name: Explain skipped Unity execution
-        if: ${{ env.UNITY_LICENSE == '' }}
-        run: |
-          echo "UNITY_LICENSE is not configured."
-          echo "License-free content smoke validation passed, but Unity import/EditMode execution remains blocked."
-      - name: Confirm Unity execution enabled
-        if: ${{ env.UNITY_LICENSE != '' }}
-        run: echo "UNITY_LICENSE is configured; Unity EditMode job is enabled."
