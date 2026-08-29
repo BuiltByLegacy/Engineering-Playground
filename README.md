@@ -24,7 +24,7 @@ Flow Lab is built around four player-facing experiences:
 - **Challenge** — solve engineering problems, score the design, improve it, and earn progression.
 - **Sandbox** — free experimentation with the same editor, solver, and visualization stack but no objective or score.
 - **Learn** — a discovery library that reveals engineering concepts after the player encounters them in gameplay.
-- **Showcase** — polished real-world plumbing, exhaust, HVAC, and manifold scenarios.
+- **Showcase** — applied plumbing, exhaust, HVAC, and manifold scenarios with normalized gameplay scoring plus clearly separated classical **Reference estimate** engineering math.
 
 The MVP deliberately prioritizes **fast, visually understandable iteration** over professional CFD accuracy.
 
@@ -41,6 +41,7 @@ Engineering Playground
 ├── Shared Game Core
 │   ├── challenge lifecycle
 │   ├── campaign catalog
+│   ├── showcase catalog
 │   ├── progression
 │   ├── Learn
 │   ├── scoring
@@ -70,6 +71,7 @@ Assets/
       Content/
         ContentModels.cs
         CampaignCatalog.cs
+        ShowcaseCatalog.cs
         ContentRepository.cs
       Learn/
         LearnCatalog.cs
@@ -86,6 +88,10 @@ Assets/
         FlowLabRuntimeController.cs
         FlowFieldVisualizer.cs
         FlowTouchEditor.cs
+      Showcases/
+        FlowShowcaseReferenceCatalog.cs
+        FlowReferenceEstimateFormatter.cs
+        FlowShowcaseSession.cs
       Simulation/
         D2Q9LbmSolver.cs
   Tests/
@@ -95,6 +101,7 @@ Assets/
       ContentMigrationTests.cs
       FlowChallengeScorerTests.cs
       LearnCatalogTests.cs
+      FlowShowcaseTests.cs
 
 Packages/
 ProjectSettings/
@@ -130,7 +137,6 @@ Issue #16 now has a real source-level Unity foundation rather than only an engin
 - schema validation and duplicate-ID checks
 - root-content loading in Editor
 - build-time synchronization into `StreamingAssets`
-- regression test source asserting 30 campaign challenges and four showcase definitions
 - PlayerPrefs-backed local progression, stars, best score/grade, concepts, and Explorer/Engineer preference
 - plain-C# D2Q9 solver from #15
 - Unity runtime solver controller
@@ -141,15 +147,18 @@ Issue #16 now has a real source-level Unity foundation rather than only an engin
 - interpolated brush strokes
 - undo / redo
 - geometry changes reset the solver state so stale distributions do not leak across resets or modes
-- Challenge mode campaign runtime for all 30 authored levels
+- **Challenge mode** campaign runtime for all 30 authored levels
 - challenge scoring, grades, stars, best scores, concept unlocks, PREV/NEXT progression, sequential completion, and chapter star gates
 - **Sandbox mode** using the same solver/editor/visualizer with a blank channel, no objectives, and no scoring
-- **Learn mode** using the same persisted concept IDs from the prototype
-- all nine Learn concepts ported with separate Explorer and Engineer wording
-- Learn PREV/NEXT browsing and persisted Explorer/Engineer presentation preference
-- Challenge / Sandbox / Learn mode switching in the temporary runtime bootstrap
-- separate temporary mode, navigation, and tool bars for migration testing
-- EditMode regression-test source for challenge scoring and Learn catalog parity
+- **Learn mode** with all nine retained concepts, separate Explorer/Engineer wording, browsing, and persisted presentation preference
+- **Showcase mode** with PREV/NEXT navigation across Fix the Shower, Build the Exhaust, Balance the HVAC, and Design the Manifold
+- standalone showcase challenge parsing and Unity-relative showcase content paths
+- normalized Showcase gameplay scoring kept separate from campaign progression
+- per-showcase physical assumption sets feeding the #15 classical reference-math engine
+- dedicated **Reference estimate** display for flow rate, Reynolds number, flow regime, Darcy friction factor, dynamic pressure, major loss, minor loss, and total estimated pressure loss
+- explicit player-facing warning that the dimensional result is **not a conversion of lattice units** and **not a professional engineering result**
+- temporary CHALLENGE / SANDBOX / LEARN / SHOWCASE runtime mode switching
+- EditMode regression-test source for campaign content, challenge scoring, Learn parity, Showcase parsing/path normalization, and reference-estimate finiteness/guardrails
 
 The bootstrap UI is migration scaffolding, not final product UX. Authored Unity scenes/prefabs should replace it after the first clean import and parity run.
 
@@ -171,7 +180,30 @@ Learn reads unlocked concept IDs directly from `PlayerProgressStore`, so Challen
 
 ### Showcase
 
-Showcase remains the major unported player mode. The next parity slice should connect the four existing showcase definitions to the Unity runtime and expose #15 engineering reference math as clearly labeled **Reference estimate** output.
+Showcase cycles the four applied Flow scenarios with the same solver/editor/visualizer and normalized gameplay scorer. Showcase scores do **not** write into campaign progression.
+
+Each Showcase also displays a separate **Reference estimate — Classical 1D** card. The reference card is calculated from explicit, scenario-specific physical assumptions rather than converting the 2D lattice simulation to engineering units. Current cards can show:
+
+- assumed fluid and equivalent geometry
+- hydraulic/equivalent diameter
+- reference velocity
+- volumetric flow
+- Reynolds number and regime
+- Darcy friction factor
+- dynamic pressure
+- major Darcy-Weisbach loss
+- minor `K` loss
+- total estimated pressure loss
+- scenario-specific fidelity warning
+
+Current assumption sets are intentionally illustrative:
+
+- **Fix the Shower:** room-temperature water, 19 mm equivalent pipe, single-path estimate only.
+- **Build the Exhaust:** simplified steady gas reference in a 63.5 mm equivalent tube; no pulse/scavenging/acoustic/power claims.
+- **Balance the HVAC:** room-condition air through a 300 mm equivalent hydraulic diameter; not a full building duct network.
+- **Design the Manifold:** air-like single-runner reference; no independent outlet-flow or flow-bench-equivalent prediction.
+
+**Current visual limitation:** the four Showcase definitions still start from the shared `default_channel` geometry. They are now distinct in content, objectives, scoring, theme metadata, and reference assumptions, but visually distinct solver presets/packaging overlays remain follow-up work.
 
 ## Engineering-validity foundation
 
@@ -212,7 +244,7 @@ Each level defines success thresholds, scoring weights, concept unlocks, hints, 
 
 ## Applied Flow showcases
 
-Four dedicated showcase scenarios are defined:
+Four dedicated showcase scenarios are defined and represented in the Unity source:
 
 1. **Fix the Shower** — residential plumbing.
 2. **Build the Exhaust** — automotive exhaust.
@@ -237,7 +269,7 @@ Dimensional results come from explicit assumptions and classical equations, not 
 
 Reference cards can show fluid assumptions, hydraulic diameter, velocity, flow rate, Reynolds number, flow regime, friction factor, dynamic pressure, major loss, minor loss, and total estimated pressure loss.
 
-Player-facing dimensional values should be labeled **Reference estimate** unless a case has been explicitly calibrated and benchmarked.
+Player-facing dimensional values are labeled **Reference estimate** unless a case has been explicitly calibrated and benchmarked.
 
 ## Validity tiers
 
@@ -292,7 +324,8 @@ Not in the current MVP:
 4. Run EditMode tests before accepting numerical/content parity.
 5. Use **Engineering Playground → Sync Content To StreamingAssets** before manual player-build inspection; normal Unity builds also run the sync automatically.
 6. Open/run an empty scene: the temporary bootstrap creates the current Flow Lab migration workspace automatically.
-7. Use the CHALLENGE / SANDBOX / LEARN controls to exercise the currently ported modes.
+7. Use CHALLENGE / SANDBOX / LEARN / SHOWCASE to exercise the source-level mode parity.
+8. In SHOWCASE, compare the normalized visual/gameplay result with the independently calculated **Reference estimate** card; do not interpret lattice values as engineering units.
 
 ## GitHub
 
@@ -314,4 +347,4 @@ Major implemented/design slices:
 - **#15** Flow engineering validity, reference math, and solver benchmarking
 - **#16** Unity migration — production project, Flow Lab parity, and mobile foundation
 
-#16 remains open until Unity import/test evidence, Showcase parity, authored production UI, and real-device validation are complete.
+#16 remains open until clean Unity import/test evidence, authored production UI, visually distinct Showcase geometry/presentation, complete touch/mobile validation, and real-device validation are recorded.
