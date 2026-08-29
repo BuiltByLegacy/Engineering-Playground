@@ -23,6 +23,7 @@ namespace EngineeringPlayground.App
         private FlowChallengeSession _challengeSession;
         private FlowChallengeHud _challengeHud;
         private FlowShowcaseSession _showcaseSession;
+        private ShowcasePackagingOverlay _showcaseOverlay;
         private GameObject _workspace;
         private Text _header;
         private Text _description;
@@ -38,6 +39,7 @@ namespace EngineeringPlayground.App
             FlowChallengeSession challengeSession,
             FlowChallengeHud challengeHud,
             FlowShowcaseSession showcaseSession,
+            ShowcasePackagingOverlay showcaseOverlay,
             GameObject workspace,
             Text header,
             Text description,
@@ -48,6 +50,7 @@ namespace EngineeringPlayground.App
             _challengeSession = challengeSession;
             _challengeHud = challengeHud;
             _showcaseSession = showcaseSession;
+            _showcaseOverlay = showcaseOverlay;
             _workspace = workspace;
             _header = header;
             _description = description;
@@ -185,6 +188,7 @@ namespace EngineeringPlayground.App
         {
             if (_workspace != null)
                 _workspace.SetActive(true);
+            _showcaseOverlay?.SetVisible(false);
             ClearReference();
             _flowController.SetRunning(false);
             if (_challengeSession.CurrentChallenge != null)
@@ -196,6 +200,7 @@ namespace EngineeringPlayground.App
         {
             if (_workspace != null)
                 _workspace.SetActive(true);
+            _showcaseOverlay?.SetVisible(false);
             ClearReference();
             _flowController.SetRunning(false);
             _flowController.ClearGeometry();
@@ -215,6 +220,7 @@ namespace EngineeringPlayground.App
         private void EnterLearn()
         {
             _flowController.SetRunning(false);
+            _showcaseOverlay?.SetVisible(false);
             ClearReference();
             if (_workspace != null)
                 _workspace.SetActive(false);
@@ -228,6 +234,7 @@ namespace EngineeringPlayground.App
                 _workspace.SetActive(true);
             _flowController.SetRunning(false);
             _showcaseSession.ResetCurrent();
+            _showcaseOverlay?.SetVisible(true);
             RefreshShowcase();
         }
 
@@ -241,7 +248,7 @@ namespace EngineeringPlayground.App
             if (_header != null)
                 _header.text = $"SHOWCASE {_showcaseSession.CurrentIndex + 1}/{_showcaseSession.ShowcaseCount} — {entry.Title}";
             if (_description != null)
-                _description.text = $"{challenge.Description}\nTheme: {entry.Theme}. PREV/NEXT changes applied scenario; the visual solver remains normalized and qualitative/semi-quantitative.";
+                _description.text = $"{challenge.Description}\nTheme: {entry.Theme} · Geometry: {_showcaseSession.CurrentGeometryId}. Packaging graphics are context-only; the solver mask drives the actual 2D flow field.";
             if (_result != null)
             {
                 _result.text = scored == null
