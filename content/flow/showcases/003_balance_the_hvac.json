@@ -6,7 +6,7 @@
   "description": "Shape a smooth supply path that favors even-looking distribution while controlling restriction and path complexity.",
   "difficulty": 5,
   "presentation_mode": "explorer",
-  "starting_state": {"geometry": "default_channel"},
+  "starting_state": {"geometry": "showcase_hvac_distribution"},
   "allowed_tools": ["draw_wall", "erase", "pan"],
   "constraints": {"max_added_solid_cells": 195},
   "success_conditions": {"min_outlet_speed": 0.049, "max_pressure_loss": 0.027, "minimum_score": 68.0},
@@ -22,7 +22,7 @@
       "environment_labels": ["AIR HANDLER", "ROOM A", "ROOM B", "ROOM C"],
       "tradeoff": "delivery_vs_symmetry_vs_complexity",
       "media_safe": true,
-      "fidelity_note": "MVP does not solve a true multi-branch duct network or room-by-room airflow balance. Visual balance is represented through 2D flow-field symmetry and restriction proxies only."
+      "fidelity_note": "MVP uses a symmetric room/duct packaging proxy. It does not solve a true multi-branch duct network or room-by-room airflow balance; visual balance uses 2D field symmetry and restriction proxies only."
     }
   }
 }
