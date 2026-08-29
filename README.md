@@ -65,14 +65,21 @@ Assets/
   Scripts/
     App/
       EngineeringPlaygroundBootstrap.cs
+      FlowLabModeController.cs
     Core/
       Content/
         ContentModels.cs
         CampaignCatalog.cs
         ContentRepository.cs
+      Learn/
+        LearnCatalog.cs
       Progress/
         PlayerProgressStore.cs
     Flow/
+      Challenges/
+        FlowChallengeHud.cs
+        FlowChallengeScorer.cs
+        FlowChallengeSession.cs
       Engineering/
         FlowEngineeringReferenceModel.cs
       Runtime/
@@ -86,6 +93,8 @@ Assets/
       FlowEngineeringReferenceModelTests.cs
       D2Q9LbmSolverTests.cs
       ContentMigrationTests.cs
+      FlowChallengeScorerTests.cs
+      LearnCatalogTests.cs
 
 Packages/
 ProjectSettings/
@@ -131,12 +140,38 @@ Issue #16 now has a real source-level Unity foundation rather than only an engin
 - draw / erase / pan interaction
 - interpolated brush strokes
 - undo / redo
-- clear / reset / run-pause controls
-- temporary runtime bootstrap that creates a Flow workspace and toolbar without requiring a hand-authored migration scene
+- geometry changes reset the solver state so stale distributions do not leak across resets or modes
+- Challenge mode campaign runtime for all 30 authored levels
+- challenge scoring, grades, stars, best scores, concept unlocks, PREV/NEXT progression, sequential completion, and chapter star gates
+- **Sandbox mode** using the same solver/editor/visualizer with a blank channel, no objectives, and no scoring
+- **Learn mode** using the same persisted concept IDs from the prototype
+- all nine Learn concepts ported with separate Explorer and Engineer wording
+- Learn PREV/NEXT browsing and persisted Explorer/Engineer presentation preference
+- Challenge / Sandbox / Learn mode switching in the temporary runtime bootstrap
+- separate temporary mode, navigation, and tool bars for migration testing
+- EditMode regression-test source for challenge scoring and Learn catalog parity
 
 The bootstrap UI is migration scaffolding, not final product UX. Authored Unity scenes/prefabs should replace it after the first clean import and parity run.
 
 **Important:** source code and test definitions are committed, but a clean Unity import, Test Framework run, mobile build, and device test have not yet been recorded. Do not treat those acceptance items as passed until there is execution evidence.
+
+## Flow Lab modes currently represented in Unity source
+
+### Challenge
+
+The Unity runtime consumes the existing 30-level campaign and preserves authored scoring semantics. Passing a challenge persists completion, best score, best grade, stars, and concept unlocks. NEXT requires the current level to be completed and chapter star gates remain enforced.
+
+### Sandbox
+
+Sandbox starts from a blank channel and keeps the same drawing, erase, pan, undo/redo, field views, reset, and run/pause behavior as Challenge mode. It intentionally has no pass/fail state and no score.
+
+### Learn
+
+Learn reads unlocked concept IDs directly from `PlayerProgressStore`, so Challenge discoveries automatically appear in the library. The nine retained concepts are Flow Rate, Pressure, Velocity, Restriction, Vortices & Recirculation, Pressure Loss, Flow Balance, Bernoulli Principle, and Reynolds Number. The MODE control switches persisted Explorer/Engineer explanation depth.
+
+### Showcase
+
+Showcase remains the major unported player mode. The next parity slice should connect the four existing showcase definitions to the Unity runtime and expose #15 engineering reference math as clearly labeled **Reference estimate** output.
 
 ## Engineering-validity foundation
 
@@ -257,6 +292,7 @@ Not in the current MVP:
 4. Run EditMode tests before accepting numerical/content parity.
 5. Use **Engineering Playground → Sync Content To StreamingAssets** before manual player-build inspection; normal Unity builds also run the sync automatically.
 6. Open/run an empty scene: the temporary bootstrap creates the current Flow Lab migration workspace automatically.
+7. Use the CHALLENGE / SANDBOX / LEARN controls to exercise the currently ported modes.
 
 ## GitHub
 
@@ -278,4 +314,4 @@ Major implemented/design slices:
 - **#15** Flow engineering validity, reference math, and solver benchmarking
 - **#16** Unity migration — production project, Flow Lab parity, and mobile foundation
 
-#16 remains open until Unity import/test evidence, full Challenge/Sandbox/Learn/Showcase parity, authored production UI, and real-device validation are complete.
+#16 remains open until Unity import/test evidence, Showcase parity, authored production UI, and real-device validation are complete.
