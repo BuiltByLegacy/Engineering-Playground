@@ -6,7 +6,7 @@
   "description": "Route a simplified exhaust path through a tight vehicle envelope while minimizing restriction, length, and turbulent losses.",
   "difficulty": 5,
   "presentation_mode": "explorer",
-  "starting_state": {"geometry": "default_channel"},
+  "starting_state": {"geometry": "showcase_automotive_exhaust"},
   "allowed_tools": ["draw_wall", "erase", "pan"],
   "constraints": {"max_added_solid_cells": 185},
   "success_conditions": {"min_outlet_speed": 0.051, "max_pressure_loss": 0.028, "minimum_score": 68.0},
@@ -22,7 +22,7 @@
       "environment_labels": ["ENGINE", "CHASSIS", "REAR EXIT"],
       "tradeoff": "flow_vs_packaging_vs_length",
       "media_safe": true,
-      "fidelity_note": "MVP uses simplified 2D incompressible flow. It does not model exhaust pulses, compressibility, acoustics, scavenging, temperature, RPM, catalyst behavior, or dyno-grade power effects."
+      "fidelity_note": "MVP uses a vehicle-packaging proxy with simplified 2D incompressible flow. It does not model exhaust pulses, compressibility, acoustics, scavenging, temperature, RPM, catalyst behavior, or dyno-grade power effects."
     }
   }
 }
