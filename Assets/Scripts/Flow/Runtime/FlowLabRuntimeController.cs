@@ -20,7 +20,7 @@ namespace EngineeringPlayground.Flow.Runtime
         private void Awake()
         {
             Solver = new D2Q9LbmSolver(width, height, relaxationOmega, inletVelocity);
-            Solver.AddCircularObstacle((int)(width * 0.52), height / 2, Math.Max(3, (int)(Math.Min(width, height) * 0.11)));
+            RestoreDefaultChallengeGeometry();
         }
 
         private void Update()
@@ -51,6 +51,19 @@ namespace EngineeringPlayground.Flow.Runtime
         public void ClearGeometry()
         {
             Solver.ClearInteriorSolids();
+            SolverUpdated?.Invoke();
+        }
+
+        public void RestoreDefaultChallengeGeometry()
+        {
+            if (Solver == null)
+                return;
+
+            Solver.ClearInteriorSolids();
+            Solver.AddCircularObstacle(
+                (int)(width * 0.52),
+                height / 2,
+                Math.Max(3, (int)(Math.Min(width, height) * 0.11)));
             SolverUpdated?.Invoke();
         }
 
