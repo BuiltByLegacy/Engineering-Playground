@@ -1,0 +1,17 @@
+{
+  "name": "EngineeringPlayground.EditModeTests",
+  "rootNamespace": "EngineeringPlayground.Tests.EditMode",
+  "references": [
+    "EngineeringPlayground.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": false
+}

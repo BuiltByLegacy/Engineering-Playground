@@ -6,17 +6,17 @@ namespace EngineeringPlayground.Flow.Showcases
 {
     public sealed class FlowShowcaseReferenceAssumption
     {
-        public string ShowcaseId { get; init; } = string.Empty;
-        public string FluidLabel { get; init; } = string.Empty;
-        public string GeometryLabel { get; init; } = string.Empty;
-        public double DiameterM { get; init; }
-        public double LengthM { get; init; }
-        public double VelocityMPerS { get; init; }
-        public double DensityKgPerM3 { get; init; }
-        public double DynamicViscosityPaS { get; init; }
-        public double AbsoluteRoughnessM { get; init; }
-        public double AggregateLossCoefficientK { get; init; }
-        public string FidelityNote { get; init; } = string.Empty;
+        public string ShowcaseId { get; set; } = string.Empty;
+        public string FluidLabel { get; set; } = string.Empty;
+        public string GeometryLabel { get; set; } = string.Empty;
+        public double DiameterM { get; set; }
+        public double LengthM { get; set; }
+        public double VelocityMPerS { get; set; }
+        public double DensityKgPerM3 { get; set; }
+        public double DynamicViscosityPaS { get; set; }
+        public double AbsoluteRoughnessM { get; set; }
+        public double AggregateLossCoefficientK { get; set; }
+        public string FidelityNote { get; set; } = string.Empty;
 
         public FlowReferenceResult Evaluate() => FlowEngineeringReferenceModel.EvaluateCircularRun(
             DiameterM,

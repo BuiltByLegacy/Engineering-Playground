@@ -17,6 +17,17 @@ namespace EngineeringPlayground.Core.Content
         public static string ReadText(string relativePath)
         {
             relativePath = ShowcaseCatalog.NormalizeContentPath(relativePath);
+
+            if (!Application.isEditor)
+            {
+                var resourcePath = $"EngineeringContent/{Path.ChangeExtension(relativePath, null)}"
+                    .Replace('\\', '/');
+                var asset = Resources.Load<TextAsset>(resourcePath);
+                if (asset == null)
+                    throw new FileNotFoundException($"Engineering Playground content not found: {relativePath}");
+                return asset.text;
+            }
+
             var path = Resolve(relativePath);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Engineering Playground content not found: {relativePath}", path);

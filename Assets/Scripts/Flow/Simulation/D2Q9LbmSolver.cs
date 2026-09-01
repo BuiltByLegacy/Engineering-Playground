@@ -22,7 +22,7 @@ namespace EngineeringPlayground.Flow.Simulation
         private readonly double[] _ux;
         private readonly double[] _uy;
 
-        public D2Q9LbmSolver(int width, int height, double relaxationOmega = 1.82, double inletVelocity = 0.065)
+        public D2Q9LbmSolver(int width, int height, double relaxationOmega = 1.82, double inletVelocity = 0.05)
         {
             if (width < 8) throw new ArgumentOutOfRangeException(nameof(width));
             if (height < 8) throw new ArgumentOutOfRangeException(nameof(height));

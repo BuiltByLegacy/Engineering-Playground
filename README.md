@@ -2,6 +2,8 @@
 
 **Build it. Test it. Make it better.**
 
+[**Play in browser**](https://builtbylegacy.github.io/Engineering-Playground/) — the Unity 6000.3.18f1 WebGL build is validated locally. The public Pages deployment remains pending until a supported Unity CI license is available to GitHub Actions.
+
 Engineering Playground is a mobile-first engineering game where players learn by building, simulating, breaking, and improving systems instead of reading through a traditional lesson first.
 
 The long-term product is **one mobile game with multiple modular playgrounds**. The first playable release is **Flow Lab**.

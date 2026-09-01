@@ -176,6 +176,7 @@ namespace EngineeringPlayground.App
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = 18;
             text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.black;
             text.text = label;
         }
     }

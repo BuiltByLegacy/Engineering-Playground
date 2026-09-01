@@ -9,7 +9,7 @@ namespace EngineeringPlayground.Flow.Runtime
         [SerializeField] private int width = 96;
         [SerializeField] private int height = 54;
         [SerializeField] private double relaxationOmega = 1.82;
-        [SerializeField] private double inletVelocity = 0.065;
+        [SerializeField] private double inletVelocity = 0.05;
         [SerializeField] private int solverIterationsPerFrame = 2;
         [SerializeField] private bool running = true;
 

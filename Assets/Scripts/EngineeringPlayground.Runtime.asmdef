@@ -1,0 +1,9 @@
+{
+  "name": "EngineeringPlayground.Runtime",
+  "rootNamespace": "EngineeringPlayground",
+  "references": [
+    "Unity.InputSystem",
+    "UnityEngine.UI"
+  ],
+  "autoReferenced": true
+}

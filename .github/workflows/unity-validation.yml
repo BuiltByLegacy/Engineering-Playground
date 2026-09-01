@@ -27,6 +27,8 @@ jobs:
     needs: smoke
     env:
       UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,7 +37,7 @@ jobs:
         id: license
         shell: bash
         run: |
-          if [ -n "$UNITY_LICENSE" ]; then
+          if [ -n "$UNITY_LICENSE" ] && [ -n "$UNITY_EMAIL" ] && [ -n "$UNITY_PASSWORD" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
@@ -43,7 +45,7 @@ jobs:
       - name: Explain skipped Unity execution
         if: steps.license.outputs.available != 'true'
         run: |
-          echo "UNITY_LICENSE is not configured."
+          echo "One or more Unity CI credentials are not configured."
           echo "License-free content smoke validation passed, but Unity import/EditMode execution remains blocked."
       - uses: actions/cache@v4
         if: steps.license.outputs.available == 'true'
@@ -57,6 +59,8 @@ jobs:
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           unityVersion: 6000.3.18f1
           testMode: EditMode
