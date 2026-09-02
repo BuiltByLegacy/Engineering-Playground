@@ -1,4 +1,5 @@
 using System;
+using EngineeringPlayground.Flow.Pipes;
 using EngineeringPlayground.Flow.Simulation;
 using UnityEngine;
 
@@ -14,85 +15,47 @@ namespace EngineeringPlayground.Flow.Runtime
         [SerializeField] private bool running = true;
 
         public D2Q9LbmSolver Solver { get; private set; }
+        public PipePathModel PipePath { get; private set; }
         public bool Running => running;
         public event Action SolverUpdated;
 
         private void Awake()
         {
             Solver = new D2Q9LbmSolver(width, height, relaxationOmega, inletVelocity);
-            RestoreDefaultChallengeGeometry();
+            PipePath = new PipePathModel();
+            PipePath.Changed += ApplyPipePath;
+            ApplyPipePreset(1);
         }
+
+        private void OnDestroy(){if(PipePath!=null)PipePath.Changed-=ApplyPipePath;}
 
         private void Update()
         {
-            if (!running || Solver == null)
-                return;
-
+            if (!running || Solver == null) return;
             Solver.Step(Math.Max(1, solverIterationsPerFrame));
-            if (!Solver.IsFinite())
-            {
-                running = false;
-                Debug.LogError("Flow solver entered a non-finite state and was paused.");
-                return;
-            }
-
+            if (!Solver.IsFinite()) { running = false; Debug.LogError("Flow solver entered a non-finite state and was paused."); return; }
             SolverUpdated?.Invoke();
         }
 
         public void SetRunning(bool value) => running = value;
         public void ToggleRunning() => running = !running;
+        public void ResetSimulation(){Solver.Reset();SolverUpdated?.Invoke();}
 
-        public void ResetSimulation()
+        public void ApplyPipePreset(int level)
         {
-            Solver.Reset();
-            SolverUpdated?.Invoke();
+            var radius = level==4 ? .075f : level==5 ? .11f : .09f;
+            PipePath.SetPreset(PipePathPresets.ForLevel(level), radius);
+            ApplyPipePath();
         }
 
-        public void ClearGeometry()
-        {
-            if (Solver == null)
-                return;
+        public void MovePipeHandle(int index, Vector2 normalizedPosition) => PipePath.MovePoint(index, normalizedPosition);
+        public void ResetPipePath(){PipePath.ResetToPreset();ApplyPipePath();}
+        private void ApplyPipePath(){if(Solver==null||PipePath==null)return;PipeSolverAdapter.Apply(Solver,PipePath);running=false;SolverUpdated?.Invoke();}
 
-            Solver.ClearInteriorSolids();
-            Solver.Reset();
-            SolverUpdated?.Invoke();
-        }
-
-        public void RestoreDefaultChallengeGeometry()
-        {
-            if (Solver == null)
-                return;
-
-            Solver.ClearInteriorSolids();
-            Solver.AddCircularObstacle(
-                (int)(width * 0.52),
-                height / 2,
-                Math.Max(3, (int)(Math.Min(width, height) * 0.11)));
-            Solver.Reset();
-            SolverUpdated?.Invoke();
-        }
-
-        public void ApplySolidMask(bool[] mask)
-        {
-            if (Solver == null)
-                return;
-
-            Solver.ApplySolidMask(mask, true);
-            SolverUpdated?.Invoke();
-        }
-
-        public void SetSolid(int x, int y, bool solid)
-        {
-            Solver.SetSolid(x, y, solid);
-            Solver.Reset();
-            SolverUpdated?.Invoke();
-        }
-
-        public string GetGuardrailStatus()
-        {
-            if (!Solver.IsLowMach())
-                return $"Outside normal low-Mach guardrail (Ma={Solver.InletMachNumber:F3}).";
-            return $"Low-Mach guardrail OK (Ma={Solver.InletMachNumber:F3}).";
-        }
+        public void ClearGeometry(){if(Solver==null)return;Solver.ClearInteriorSolids();Solver.Reset();SolverUpdated?.Invoke();}
+        public void RestoreDefaultChallengeGeometry(){ApplyPipePreset(1);}
+        public void ApplySolidMask(bool[] mask){if(Solver==null)return;Solver.ApplySolidMask(mask,true);SolverUpdated?.Invoke();}
+        public void SetSolid(int x,int y,bool solid){Solver.SetSolid(x,y,solid);Solver.Reset();SolverUpdated?.Invoke();}
+        public string GetGuardrailStatus()=>!Solver.IsLowMach()?$"Outside normal low-Mach guardrail (Ma={Solver.InletMachNumber:F3}).":$"Low-Mach guardrail OK (Ma={Solver.InletMachNumber:F3}).";
     }
 }
