@@ -49,14 +49,25 @@ namespace EngineeringPlayground.Flow.Pipes
             var p1 = _points[i];
             var p2 = _points[i + 1];
             var p3 = _points[Mathf.Min(_points.Count - 1, i + 2)];
-            return .5f * ((2f*p1) + (-p0+p2)*u + (2f*p0-5f*p1+4f*p2-p3)*u*u + (-p0+3f*p1-3f*p2+p3)*u*u*u);
+
+            // Cardinal spline with mild tension. It preserves the satisfying smooth route edit while
+            // reducing Catmull-Rom overshoot that made early pipe presets balloon into giant arcs.
+            const float tension = .35f;
+            var m1 = (1f - tension) * .5f * (p2 - p0);
+            var m2 = (1f - tension) * .5f * (p3 - p1);
+            var u2 = u * u; var u3 = u2 * u;
+            var h00 = 2f*u3 - 3f*u2 + 1f;
+            var h10 = u3 - 2f*u2 + u;
+            var h01 = -2f*u3 + 3f*u2;
+            var h11 = u3 - u2;
+            return h00*p1 + h10*m1 + h01*p2 + h11*m2;
         }
 
         private void Recalculate()
         {
             RouteLength = 0f; CurvatureCost = 0f;
             var prev = Sample(0); var prevDir = Vector2.right;
-            const int samples = 96;
+            const int samples = 128;
             for (var i=1;i<=samples;i++)
             {
                 var p=Sample(i/(float)samples); var d=p-prev; RouteLength += d.magnitude;
@@ -75,11 +86,13 @@ namespace EngineeringPlayground.Flow.Pipes
             return level switch
             {
                 1 => new[]{new Vector2(.02f,.5f),new Vector2(.34f,.5f),new Vector2(.66f,.5f),new Vector2(.98f,.5f)},
-                2 => new[]{new Vector2(.02f,.5f),new Vector2(.30f,.68f),new Vector2(.52f,.76f),new Vector2(.72f,.62f),new Vector2(.98f,.5f)},
-                3 => new[]{new Vector2(.02f,.5f),new Vector2(.27f,.72f),new Vector2(.50f,.76f),new Vector2(.73f,.58f),new Vector2(.98f,.5f)},
+                // A plausible but improvable detour: the obstacle is immediately understandable and the
+                // player has room to make the arc gentler instead of starting from an exaggerated mountain.
+                2 => new[]{new Vector2(.02f,.5f),new Vector2(.28f,.58f),new Vector2(.50f,.66f),new Vector2(.72f,.58f),new Vector2(.98f,.5f)},
+                3 => new[]{new Vector2(.02f,.5f),new Vector2(.27f,.66f),new Vector2(.50f,.70f),new Vector2(.73f,.58f),new Vector2(.98f,.5f)},
                 4 => new[]{new Vector2(.02f,.5f),new Vector2(.30f,.5f),new Vector2(.50f,.58f),new Vector2(.70f,.5f),new Vector2(.98f,.5f)},
                 5 => new[]{new Vector2(.02f,.5f),new Vector2(.28f,.55f),new Vector2(.50f,.66f),new Vector2(.72f,.55f),new Vector2(.98f,.5f)},
-                _ => new[]{new Vector2(.02f,.5f),new Vector2(.22f,.66f),new Vector2(.42f,.38f),new Vector2(.63f,.68f),new Vector2(.80f,.48f),new Vector2(.98f,.5f)}
+                _ => new[]{new Vector2(.02f,.5f),new Vector2(.22f,.64f),new Vector2(.42f,.40f),new Vector2(.63f,.66f),new Vector2(.80f,.48f),new Vector2(.98f,.5f)}
             };
         }
     }
