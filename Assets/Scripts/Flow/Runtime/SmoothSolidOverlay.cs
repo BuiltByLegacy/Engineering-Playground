@@ -1,3 +1,4 @@
+using EngineeringPlayground.Flow.Simulation;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -43,9 +44,6 @@ namespace EngineeringPlayground.Flow.Runtime
                 var tx=Mathf.Clamp01(gx-x0);var ty=Mathf.Clamp01(gy-y0);
                 var a00=_occupancy[y0*solver.Width+x0];var a10=_occupancy[y0*solver.Width+x1];var a01=_occupancy[y1*solver.Width+x0];var a11=_occupancy[y1*solver.Width+x1];
                 var field=Mathf.Lerp(Mathf.Lerp(a00,a10,tx),Mathf.Lerp(a01,a11,tx),ty);
-
-                // Broad feather then a firm inner body. This visually rounds cell corners while preserving
-                // the same solver mask underneath.
                 var outer=Mathf.SmoothStep(0f,1f,Mathf.InverseLerp(.18f,.58f,field));
                 var inner=Mathf.SmoothStep(0f,1f,Mathf.InverseLerp(.42f,.72f,field));
                 var edge=Mathf.Clamp01(outer-inner);
@@ -56,7 +54,7 @@ namespace EngineeringPlayground.Flow.Runtime
             _texture.SetPixels32(_pixels);_texture.Apply(false,false);
         }
 
-        private void BuildSmoothedOccupancy(FlowLbmSolver solver)
+        private void BuildSmoothedOccupancy(D2Q9LbmSolver solver)
         {
             var count=solver.Width*solver.Height;if(_occupancy==null||_occupancy.Length!=count)_occupancy=new float[count];
             for(var y=0;y<solver.Height;y++)for(var x=0;x<solver.Width;x++)
