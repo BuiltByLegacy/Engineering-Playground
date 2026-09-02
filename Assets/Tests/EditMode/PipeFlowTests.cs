@@ -55,5 +55,33 @@ namespace EngineeringPlayground.Tests.EditMode
             Assert.That(solver.IsFinite(),Is.True);
             Assert.That(solver.MeanOutletSpeed(),Is.GreaterThan(0.0));
         }
+
+        [Test]
+        public void SmoothDetour_DefaultPreset_RemainsFiniteAndDeliversVisibleOutletFlow()
+        {
+            var solver=new D2Q9LbmSolver(96,54,1.82,0.05);
+            var path=new PipePathModel();
+            path.SetPreset(PipePathPresets.ForLevel(2),.075f);
+            var mask=PipeSolverAdapter.BuildSolidMask(solver,path);
+
+            AddCircularObstacle(mask,solver,.52f,.50f,.055f);
+            solver.ApplySolidMask(mask,true);
+            solver.Step(1200);
+
+            Assert.That(solver.IsFinite(),Is.True,"Level 2 default route must remain numerically stable.");
+            Assert.That(solver.MeanOutletSpeed(),Is.GreaterThan(0.006),"Default Smooth Detour must deliver measurable flow to OUT rather than visually stalling upstream.");
+        }
+
+        private static void AddCircularObstacle(bool[] mask,D2Q9LbmSolver solver,float nx,float ny,float normalizedRadius)
+        {
+            var cx=Mathf.RoundToInt(nx*(solver.Width-1));
+            var cy=Mathf.RoundToInt(ny*(solver.Height-1));
+            var radius=Mathf.Max(2,Mathf.RoundToInt(normalizedRadius*solver.Height));
+            for(var y=1;y<solver.Height-1;y++)for(var x=1;x<solver.Width-1;x++)
+            {
+                var dx=x-cx;var dy=y-cy;
+                if(dx*dx+dy*dy<=radius*radius)mask[y*solver.Width+x]=true;
+            }
+        }
     }
 }
