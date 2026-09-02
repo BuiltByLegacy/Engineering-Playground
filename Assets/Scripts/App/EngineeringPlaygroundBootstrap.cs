@@ -55,12 +55,20 @@ namespace EngineeringPlayground.App
             var visualizer = workspaceObject.GetComponent<FlowFieldVisualizer>(); visualizer.Configure(controller, rawImage);
             var editor = workspaceObject.GetComponent<FlowTouchEditor>(); editor.Configure(controller, workspaceRect);
 
+            var tracerObject = new GameObject("Flow Tracers", typeof(RectTransform), typeof(CanvasRenderer), typeof(FlowTracerOverlay));
+            tracerObject.transform.SetParent(workspaceObject.transform, false);
+            var tracerRect = tracerObject.GetComponent<RectTransform>(); tracerRect.anchorMin = Vector2.zero; tracerRect.anchorMax = Vector2.one; tracerRect.offsetMin = tracerRect.offsetMax = Vector2.zero;
+            tracerObject.GetComponent<FlowTracerOverlay>().Configure(controller);
+
             var overlayObject = new GameObject("Showcase Packaging Overlay", typeof(RectTransform), typeof(ShowcasePackagingOverlay));
             overlayObject.transform.SetParent(workspaceObject.transform, false);
             var overlayRect = overlayObject.GetComponent<RectTransform>(); overlayRect.anchorMin = Vector2.zero; overlayRect.anchorMax = Vector2.one; overlayRect.offsetMin = overlayRect.offsetMax = Vector2.zero;
             var showcaseOverlay = overlayObject.GetComponent<ShowcasePackagingOverlay>(); showcaseOverlay.Configure(showcaseSession); showcaseOverlay.SetVisible(false);
 
-            var resultCard = CreatePanel(canvasObject.transform, "Result Card", new Vector2(.18f,.22f), new Vector2(.82f,.48f), new Color32(12,22,34,248));
+            var hintPanel = CreatePanel(workspaceFrame.transform, "Coach Hint", new Vector2(.03f,.87f), new Vector2(.97f,.98f), new Color32(8,18,28,210));
+            var hint = CreateText(hintPanel.transform, "Hint", new Vector2(.025f,.08f), new Vector2(.975f,.92f), 17, TextAnchor.MiddleLeft, TextPrimary, FontStyle.Bold);
+
+            var resultCard = CreatePanel(canvasObject.transform, "Result Card", new Vector2(.18f,.25f), new Vector2(.82f,.53f), new Color32(12,22,34,248));
             var result = CreateText(resultCard.transform, "Result", new Vector2(.04f,.08f), new Vector2(.96f,.92f), 22, TextAnchor.MiddleLeft, TextPrimary);
             resultCard.SetActive(false);
             var reference = CreateText(canvasObject.transform, "Reference Estimate", new Vector2(.04f,.18f), new Vector2(.96f,.78f), 17, TextAnchor.UpperLeft, TextPrimary); reference.gameObject.SetActive(false);
@@ -69,11 +77,6 @@ namespace EngineeringPlayground.App
             var modeController = root.AddComponent<FlowLabModeController>();
             modeController.Configure(controller, challengeSession, hud, showcaseSession, showcaseOverlay, workspaceObject, header, description, result, reference);
 
-            AddModeButton(modeBar.transform, "PLAY", () => modeController.SetMode(FlowLabMode.Challenge));
-            AddModeButton(modeBar.transform, "FREE", () => modeController.SetMode(FlowLabMode.Sandbox));
-            AddModeButton(modeBar.transform, "LEARN", () => modeController.SetMode(FlowLabMode.Learn));
-            AddModeButton(modeBar.transform, "REAL", () => modeController.SetMode(FlowLabMode.Showcase));
-
             var toolRail = CreateBar(canvasObject.transform, "Tool Rail", new Vector2(.025f,.035f), new Vector2(.43f,.135f), 8f);
             AddButton(toolRail.transform, "DRAW", () => editor.SetTool(FlowEditorTool.Draw));
             AddButton(toolRail.transform, "ERASE", () => editor.SetTool(FlowEditorTool.Erase));
@@ -81,11 +84,46 @@ namespace EngineeringPlayground.App
             AddButton(toolRail.transform, "VIEW", () => visualizer.CycleViewMode());
 
             var actionRail = CreateBar(canvasObject.transform, "Action Rail", new Vector2(.57f,.035f), new Vector2(.975f,.135f), 8f);
-            AddButton(actionRail.transform, "RESET", modeController.Reset);
-            AddButton(actionRail.transform, "PREV", modeController.Previous);
-            AddPrimaryButton(actionRail.transform, "RUN FLOW", modeController.ToggleRunning);
-            AddButton(actionRail.transform, "SCORE", () => { resultCard.SetActive(true); modeController.Score(); });
-            AddButton(actionRail.transform, "NEXT", modeController.Next);
+            var resetButton = AddButton(actionRail.transform, "RESET", modeController.Reset);
+            var prevButton = AddButton(actionRail.transform, "PREV", modeController.Previous);
+            var primaryButton = AddPrimaryButton(actionRail.transform, "RUN FLOW", () => { });
+            var primaryLabel = primaryButton.GetComponentInChildren<Text>();
+            var nextButton = AddButton(actionRail.transform, "NEXT", () => { });
+
+            var play = root.AddComponent<FlowChallengePlayController>();
+            play.Configure(controller, challengeSession);
+            var experience = root.AddComponent<FlowChallengeExperience>();
+            experience.Configure(play, challengeSession, editor, toolRail, resultCard, hint, primaryButton, primaryLabel, nextButton);
+
+            primaryButton.onClick.RemoveAllListeners();
+            primaryButton.onClick.AddListener(() =>
+            {
+                if (modeController.Mode == FlowLabMode.Challenge) experience.PrimaryAction();
+                else modeController.ToggleRunning();
+            });
+            nextButton.onClick.RemoveAllListeners();
+            nextButton.onClick.AddListener(() =>
+            {
+                if (modeController.Mode == FlowLabMode.Challenge) experience.Next();
+                else modeController.Next();
+            });
+            resetButton.onClick.RemoveAllListeners();
+            resetButton.onClick.AddListener(() =>
+            {
+                if (modeController.Mode == FlowLabMode.Challenge) play.Retry();
+                else modeController.Reset();
+            });
+            prevButton.onClick.RemoveAllListeners();
+            prevButton.onClick.AddListener(() =>
+            {
+                if (modeController.Mode == FlowLabMode.Challenge) play.Previous();
+                else modeController.Previous();
+            });
+
+            AddModeButton(modeBar.transform, "PLAY", () => { modeController.SetMode(FlowLabMode.Challenge); experience.SetChallengeModeActive(true); });
+            AddModeButton(modeBar.transform, "FREE", () => { experience.SetChallengeModeActive(false); modeController.SetMode(FlowLabMode.Sandbox); });
+            AddModeButton(modeBar.transform, "LEARN", () => { experience.SetChallengeModeActive(false); modeController.SetMode(FlowLabMode.Learn); });
+            AddModeButton(modeBar.transform, "REAL", () => { experience.SetChallengeModeActive(false); modeController.SetMode(FlowLabMode.Showcase); });
         }
 
         private static void EnsureEventSystem()
@@ -115,13 +153,13 @@ namespace EngineeringPlayground.App
             var text=go.GetComponent<Text>(); text.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); text.fontSize=size; text.alignment=align; text.color=color; text.fontStyle=style; text.horizontalOverflow=HorizontalWrapMode.Wrap; text.verticalOverflow=VerticalWrapMode.Truncate; return text;
         }
 
-        private static void AddModeButton(Transform parent,string label,UnityEngine.Events.UnityAction action) => AddStyledButton(parent,label,action,SurfaceStrong,TextMuted,15);
-        private static void AddButton(Transform parent,string label,UnityEngine.Events.UnityAction action) => AddStyledButton(parent,label,action,Surface,TextPrimary,16);
-        private static void AddPrimaryButton(Transform parent,string label,UnityEngine.Events.UnityAction action) => AddStyledButton(parent,label,action,Accent,Background,18);
-        private static void AddStyledButton(Transform parent,string label,UnityEngine.Events.UnityAction action,Color bg,Color fg,int fontSize)
+        private static Button AddModeButton(Transform parent,string label,UnityEngine.Events.UnityAction action) => AddStyledButton(parent,label,action,SurfaceStrong,TextMuted,15);
+        private static Button AddButton(Transform parent,string label,UnityEngine.Events.UnityAction action) => AddStyledButton(parent,label,action,Surface,TextPrimary,16);
+        private static Button AddPrimaryButton(Transform parent,string label,UnityEngine.Events.UnityAction action) => AddStyledButton(parent,label,action,Accent,Background,18);
+        private static Button AddStyledButton(Transform parent,string label,UnityEngine.Events.UnityAction action,Color bg,Color fg,int fontSize)
         {
-            var go=new GameObject(label,typeof(RectTransform),typeof(Image),typeof(Button)); go.transform.SetParent(parent,false); go.GetComponent<Image>().color=bg; go.GetComponent<Button>().onClick.AddListener(action);
-            var text=CreateText(go.transform,"Label",Vector2.zero,Vector2.one,fontSize,TextAnchor.MiddleCenter,fg,FontStyle.Bold); text.text=label;
+            var go=new GameObject(label,typeof(RectTransform),typeof(Image),typeof(Button)); go.transform.SetParent(parent,false); go.GetComponent<Image>().color=bg; var button=go.GetComponent<Button>(); button.onClick.AddListener(action);
+            var text=CreateText(go.transform,"Label",Vector2.zero,Vector2.one,fontSize,TextAnchor.MiddleCenter,fg,FontStyle.Bold); text.text=label; return button;
         }
     }
 }
