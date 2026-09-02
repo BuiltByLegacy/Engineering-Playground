@@ -38,26 +38,54 @@ namespace EngineeringPlayground.Flow.Runtime
                 var speed=Mathf.Clamp01((float)(System.Math.Sqrt(ux[i]*ux[i]+uy[i]*uy[i])/0.10));
                 var densityDelta=Mathf.Clamp((float)((rho[i]-1.0)/0.05),-1f,1f);
                 var vorticity=Mathf.Clamp((float)(solver.VorticityAt(x,y)/0.02),-1f,1f);
+                var nx=x/(float)Mathf.Max(1,solver.Width-1);var ny=y/(float)Mathf.Max(1,solver.Height-1);
                 switch(viewMode)
                 {
-                    case FlowViewMode.Pressure:_pixels[i]=Diverging(.5f+.5f*densityDelta);break;
-                    case FlowViewMode.Vorticity:_pixels[i]=Diverging(.5f+.5f*vorticity);break;
-                    case FlowViewMode.Velocity:_pixels[i]=Sequential(speed);break;
-                    default:_pixels[i]=FlowColor(speed,(float)uy[i],x/(float)Mathf.Max(1,solver.Width-1));break;
+                    case FlowViewMode.Pressure:_pixels[i]=Diverging(.5f+.5f*densityDelta,nx,ny);break;
+                    case FlowViewMode.Vorticity:_pixels[i]=Diverging(.5f+.5f*vorticity,nx,ny);break;
+                    case FlowViewMode.Velocity:_pixels[i]=Sequential(speed,nx,ny);break;
+                    default:_pixels[i]=FlowColor(speed,(float)uy[i],vorticity,nx,ny);break;
                 }
             }
             _texture.SetPixels32(_pixels);_texture.Apply(false,false);
         }
 
-        private static Color32 FlowColor(float speed,float uy,float x)
+        private static Color32 FlowColor(float speed,float uy,float vorticity,float x,float y)
         {
-            var directionBias=Mathf.Clamp01(.5f+4f*uy);
-            var depth=.04f*Mathf.Sin(x*6.28318f);
-            var baseColor=Color.Lerp(new Color(.018f,.10f,.17f),new Color(.025f,.62f,.72f),Mathf.Clamp01(speed*.9f+.1f));
-            baseColor+=new Color(depth*.3f,depth*.7f,depth,0f);
-            return Color.Lerp(baseColor,new Color(.60f,1f,.83f),Mathf.Clamp01(speed*directionBias*.32f));
+            // A subtle spatial material gives the chamber depth even when paused. Physics-driven
+            // speed/vorticity then supplies the high-contrast information during a run.
+            var vertical=1f-Mathf.Abs(y-.5f)*2f;
+            var edge=Mathf.Clamp01(Mathf.Min(Mathf.Min(x,1f-x),Mathf.Min(y,1f-y))*7f);
+            var material=.025f*vertical+.025f*edge+.012f*Mathf.Sin((x*.7f+y)*7f);
+            var slow=new Color(.015f,.085f,.13f);
+            var fast=new Color(.015f,.58f,.67f);
+            var baseColor=Color.Lerp(slow,fast,Mathf.Pow(Mathf.Clamp01(speed),.72f));
+            baseColor+=new Color(material*.22f,material*.65f,material,0f);
+
+            var directionBias=Mathf.Clamp01(.5f+5f*uy);
+            var wake=Mathf.Clamp01(Mathf.Abs(vorticity));
+            var highlight=Mathf.Clamp01(speed*.36f+directionBias*speed*.14f);
+            baseColor=Color.Lerp(baseColor,new Color(.31f,.95f,.80f),highlight);
+            baseColor=Color.Lerp(baseColor,new Color(.10f,.30f,.43f),wake*.24f);
+            return ClampColor(baseColor);
         }
-        private static Color32 Sequential(float t){t=Mathf.Clamp01(t);return Color.Lerp(new Color(.018f,.08f,.15f),new Color(.10f,.88f,.68f),t);}
-        private static Color32 Diverging(float t){t=Mathf.Clamp01(t);return t<.5f?Color.Lerp(new Color(.08f,.28f,.68f),new Color(.84f,.92f,.94f),t*2f):Color.Lerp(new Color(.84f,.92f,.94f),new Color(.90f,.24f,.24f),(t-.5f)*2f);}
+
+        private static Color32 Sequential(float t,float x,float y)
+        {
+            t=Mathf.Clamp01(t);var edge=.04f*Mathf.Clamp01(Mathf.Min(Mathf.Min(x,1f-x),Mathf.Min(y,1f-y))*8f);
+            return ClampColor(Color.Lerp(new Color(.015f,.065f,.12f),new Color(.08f,.90f,.68f),Mathf.Pow(t,.75f))+new Color(edge*.2f,edge*.5f,edge*.5f));
+        }
+
+        private static Color32 Diverging(float t,float x,float y)
+        {
+            t=Mathf.Clamp01(t);var c=t<.5f?Color.Lerp(new Color(.055f,.22f,.58f),new Color(.79f,.89f,.91f),t*2f):Color.Lerp(new Color(.79f,.89f,.91f),new Color(.89f,.20f,.22f),(t-.5f)*2f);
+            var vignette=1f-.07f*(1f-Mathf.Clamp01(Mathf.Min(Mathf.Min(x,1f-x),Mathf.Min(y,1f-y))*6f));
+            c*=vignette;return ClampColor(c);
+        }
+
+        private static Color32 ClampColor(Color c)
+        {
+            c.r=Mathf.Clamp01(c.r);c.g=Mathf.Clamp01(c.g);c.b=Mathf.Clamp01(c.b);c.a=1f;return c;
+        }
     }
 }
