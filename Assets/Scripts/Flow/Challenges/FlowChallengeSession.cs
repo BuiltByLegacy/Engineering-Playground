@@ -67,7 +67,7 @@ namespace EngineeringPlayground.Flow.Challenges
             var solver=flowController.Solver;
             var pressureLoss=Math.Abs(solver.MeanDensityAtColumn(1)-solver.MeanDensityAtColumn(solver.Width-2));
             var material=IsPipeChallenge
-                ? Math.Max(0,Math.Round((flowController.PipePath.RouteLength-_baselineRouteLength)*1000.0))
+                ? Math.Max(0,(int)Math.Round((flowController.PipePath.RouteLength-_baselineRouteLength)*1000.0))
                 : Math.Max(0,CountSolidCells()-_baselineSolidCells);
             var metrics=new FlowChallengeMetrics(solver.MeanOutletSpeed(),pressureLoss,solver.MeanAbsoluteVorticity(),material);
             LastResult=FlowChallengeScorer.Evaluate(CurrentChallenge,metrics);
