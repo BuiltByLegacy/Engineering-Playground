@@ -16,6 +16,7 @@ namespace EngineeringPlayground.Flow.Runtime
 
         public D2Q9LbmSolver Solver { get; private set; }
         public PipePathModel PipePath { get; private set; }
+        public int CurrentPipeLevel { get; private set; } = 1;
         public bool Running => running;
         public event Action SolverUpdated;
 
@@ -43,14 +44,29 @@ namespace EngineeringPlayground.Flow.Runtime
 
         public void ApplyPipePreset(int level)
         {
-            var radius = level==4 ? .075f : level==5 ? .11f : .09f;
-            PipePath.SetPreset(PipePathPresets.ForLevel(level), radius);
-            ApplyPipePath();
+            CurrentPipeLevel = Mathf.Max(1, level);
+            var radius = CurrentPipeLevel==4 ? .075f : CurrentPipeLevel==5 ? .11f : .09f;
+            PipePath.SetPreset(PipePathPresets.ForLevel(CurrentPipeLevel), radius);
         }
 
         public void MovePipeHandle(int index, Vector2 normalizedPosition) => PipePath.MovePoint(index, normalizedPosition);
-        public void ResetPipePath(){PipePath.ResetToPreset();ApplyPipePath();}
-        private void ApplyPipePath(){if(Solver==null||PipePath==null)return;PipeSolverAdapter.Apply(Solver,PipePath);running=false;SolverUpdated?.Invoke();}
+        public void ResetPipePath() => PipePath.ResetToPreset();
+
+        private void ApplyPipePath()
+        {
+            if(Solver==null||PipePath==null)return;
+            var mask=PipeSolverAdapter.BuildSolidMask(Solver,PipePath);
+            if(CurrentPipeLevel==2) AddFixedCircularObstacle(mask,.52f,.50f,.065f);
+            Solver.ApplySolidMask(mask,true);
+            running=false;
+            SolverUpdated?.Invoke();
+        }
+
+        private void AddFixedCircularObstacle(bool[] mask,float nx,float ny,float normalizedRadius)
+        {
+            var cx=Mathf.RoundToInt(nx*(Solver.Width-1));var cy=Mathf.RoundToInt(ny*(Solver.Height-1));var radius=Mathf.Max(2,Mathf.RoundToInt(normalizedRadius*Solver.Height));
+            for(var y=1;y<Solver.Height-1;y++)for(var x=1;x<Solver.Width-1;x++){var dx=x-cx;var dy=y-cy;if(dx*dx+dy*dy<=radius*radius)mask[y*Solver.Width+x]=true;}
+        }
 
         public void ClearGeometry(){if(Solver==null)return;Solver.ClearInteriorSolids();Solver.Reset();SolverUpdated?.Invoke();}
         public void RestoreDefaultChallengeGeometry(){ApplyPipePreset(1);}
