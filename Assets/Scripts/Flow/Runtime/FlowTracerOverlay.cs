@@ -7,7 +7,7 @@ namespace EngineeringPlayground.Flow.Runtime
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class FlowTracerOverlay : MaskableGraphic
     {
-        private struct Tracer { public Vector2 Position; public Vector2 Previous; public float Life; public float Phase; }
+        private struct Tracer { public Vector2 Position; public Vector2 Previous; public float Life; public float Phase; public float Stuck; }
         private readonly List<Tracer> _tracers = new();
         private FlowLabRuntimeController _controller;
         private int _targetCount;
@@ -22,8 +22,11 @@ namespace EngineeringPlayground.Flow.Runtime
             {
                 var t=_tracers[i];t.Previous=t.Position;
                 var x=Mathf.Clamp(Mathf.RoundToInt(t.Position.x*(solver.Width-1)),1,solver.Width-2);var y=Mathf.Clamp(Mathf.RoundToInt(t.Position.y*(solver.Height-1)),1,solver.Height-2);var idx=y*solver.Width+x;
-                var velocity=new Vector2((float)solver.VelocityX[idx],(float)solver.VelocityY[idx]);t.Position+=velocity*(dt*10.5f);t.Life-=dt;
-                if(t.Life<=0||t.Position.x>1.02f||t.Position.x<-.02f||t.Position.y>1.02f||t.Position.y<-.02f||solver.Solid[idx])t=Respawn(i);
+                var velocity=new Vector2((float)solver.VelocityX[idx],(float)solver.VelocityY[idx]);
+                var speed=velocity.magnitude;
+                t.Stuck = speed < .004f ? t.Stuck + dt : Mathf.Max(0f,t.Stuck-dt*2f);
+                t.Position+=velocity*(dt*12.5f);t.Life-=dt;
+                if(t.Life<=0||t.Position.x>.995f||t.Position.x<-.02f||t.Position.y>1.02f||t.Position.y<-.02f||solver.Solid[idx]||t.Stuck>.42f)t=Respawn(i);
                 _tracers[i]=t;
             }
             SetVerticesDirty();
@@ -51,16 +54,17 @@ namespace EngineeringPlayground.Flow.Runtime
             if(_controller?.PipePath!=null)
             {
                 var center=_controller.PipePath.Sample(0f);
-                var usableRadius=_controller.PipePath.Radius*.78f;
+                // Favor the energetic core rather than spawning visual tracers directly against no-slip walls.
+                var usableRadius=_controller.PipePath.Radius*.54f;
                 var y=center.y+Mathf.Lerp(-usableRadius,usableRadius,lane);
-                var x=distributed?Mathf.Lerp(.012f,.11f,Mathf.Repeat(index*.381966f,1f)):.015f;
+                var x=distributed?Mathf.Lerp(.014f,.085f,Mathf.Repeat(index*.381966f,1f)):.018f;
                 p=new Vector2(x,Mathf.Clamp01(y));
             }
             else
             {
                 p=new Vector2(distributed?Mathf.Repeat(index/(float)Mathf.Max(1,_targetCount)+lane*.15f,.95f):.015f,.06f+lane*.88f);
             }
-            return new Tracer{Position=p,Previous=p-new Vector2(.012f,0),Life=3.5f+lane*4f,Phase=lane*6.28318f};
+            return new Tracer{Position=p,Previous=p-new Vector2(.012f,0),Life=4.5f+lane*4f,Phase=lane*6.28318f,Stuck=0f};
         }
     }
 }
