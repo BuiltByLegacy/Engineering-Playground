@@ -26,11 +26,12 @@ namespace EngineeringPlayground.App
             canvasObject.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay;canvasObject.GetComponent<Image>().color=EngineeringPlaygroundTheme.Canvas;canvasObject.GetComponent<Image>().raycastTarget=false;
             var scaler=canvasObject.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);scaler.matchWidthOrHeight=.5f;
 
-            var hudPanel=ProductionUIFactory.Panel(canvasObject.transform,"Level HUD",new Vector2(.025f,.90f),new Vector2(.975f,.975f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
-            var header=ProductionUIFactory.Text(hudPanel.transform,"Header",new Vector2(.035f,.12f),new Vector2(.73f,.88f),27,TextAnchor.MiddleLeft,EngineeringPlaygroundTheme.Text,FontStyle.Bold);
-            var description=ProductionUIFactory.Text(hudPanel.transform,"Objective",new Vector2(.74f,.14f),new Vector2(.965f,.86f),15,TextAnchor.MiddleRight,EngineeringPlaygroundTheme.TextMuted);
+            // Compact phone-first HUD: level title is the hero, progress/stars are secondary.
+            var hudPanel=ProductionUIFactory.Panel(canvasObject.transform,"Level HUD",new Vector2(.025f,.91f),new Vector2(.975f,.978f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
+            var header=ProductionUIFactory.Text(hudPanel.transform,"Header",new Vector2(.035f,.12f),new Vector2(.70f,.88f),29,TextAnchor.MiddleLeft,EngineeringPlaygroundTheme.Text,FontStyle.Bold);
+            var description=ProductionUIFactory.Text(hudPanel.transform,"Progress",new Vector2(.71f,.12f),new Vector2(.96f,.88f),17,TextAnchor.MiddleRight,EngineeringPlaygroundTheme.TextMuted,FontStyle.Bold);
 
-            var workspaceFrame=ProductionUIFactory.Panel(canvasObject.transform,"Simulation Shell",new Vector2(.025f,.145f),new Vector2(.975f,.885f),EngineeringPlaygroundTheme.SurfaceRaised,EngineeringPlaygroundTheme.RadiusLarge);
+            var workspaceFrame=ProductionUIFactory.Panel(canvasObject.transform,"Simulation Shell",new Vector2(.025f,.145f),new Vector2(.975f,.895f),EngineeringPlaygroundTheme.SurfaceRaised,EngineeringPlaygroundTheme.RadiusLarge);
             var workspaceObject=new GameObject("Flow Workspace",typeof(RectTransform),typeof(RawImage),typeof(FlowFieldVisualizer),typeof(FlowTouchEditor));workspaceObject.transform.SetParent(workspaceFrame.transform,false);
             var workspaceRect=workspaceObject.GetComponent<RectTransform>();ProductionUIFactory.Stretch(workspaceRect,new Vector2(.008f,.012f),new Vector2(.992f,.988f));
             var rawImage=workspaceObject.GetComponent<RawImage>();rawImage.raycastTarget=true;
@@ -46,8 +47,11 @@ namespace EngineeringPlayground.App
             var overlayObject=new GameObject("Showcase Packaging Overlay",typeof(RectTransform),typeof(ShowcasePackagingOverlay));overlayObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(overlayObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var showcaseOverlay=overlayObject.GetComponent<ShowcasePackagingOverlay>();showcaseOverlay.Configure(showcaseSession);showcaseOverlay.SetVisible(false);
 
-            var inlet=ProductionUIFactory.Text(workspaceFrame.transform,"Inlet",new Vector2(.014f,.43f),new Vector2(.13f,.57f),15,TextAnchor.MiddleLeft,EngineeringPlaygroundTheme.Accent,FontStyle.Bold);inlet.text="IN  →";
-            var outlet=ProductionUIFactory.Text(workspaceFrame.transform,"Outlet",new Vector2(.86f,.43f),new Vector2(.986f,.57f),15,TextAnchor.MiddleRight,EngineeringPlaygroundTheme.Accent,FontStyle.Bold);outlet.text="→  OUT";
+            // Direction chips replace tiny diagnostic labels.
+            var inletChip=ProductionUIFactory.Panel(workspaceFrame.transform,"Inlet Chip",new Vector2(.018f,.455f),new Vector2(.115f,.545f),new Color32(8,31,40,225),EngineeringPlaygroundTheme.RadiusMedium);
+            var inlet=ProductionUIFactory.Text(inletChip.transform,"Inlet",new Vector2(.08f,.08f),new Vector2(.92f,.92f),15,TextAnchor.MiddleCenter,EngineeringPlaygroundTheme.Accent,FontStyle.Bold);inlet.text="IN  →";
+            var outletChip=ProductionUIFactory.Panel(workspaceFrame.transform,"Outlet Chip",new Vector2(.885f,.455f),new Vector2(.982f,.545f),new Color32(8,31,40,225),EngineeringPlaygroundTheme.RadiusMedium);
+            var outlet=ProductionUIFactory.Text(outletChip.transform,"Outlet",new Vector2(.08f,.08f),new Vector2(.92f,.92f),15,TextAnchor.MiddleCenter,EngineeringPlaygroundTheme.Accent,FontStyle.Bold);outlet.text="→  OUT";
 
             var hintPanel=ProductionUIFactory.Panel(workspaceFrame.transform,"Coach Toast",new Vector2(.035f,.895f),new Vector2(.50f,.97f),new Color32(8,20,31,225),EngineeringPlaygroundTheme.RadiusMedium);
             hintPanel.AddComponent<CanvasGroup>();hintPanel.AddComponent<ProductionToast>();
@@ -67,21 +71,23 @@ namespace EngineeringPlayground.App
             var hud=root.AddComponent<FlowChallengeHud>();hud.Configure(challengeSession,header,description,result,metrics);
             var modeController=root.AddComponent<FlowLabModeController>();modeController.Configure(controller,challengeSession,hud,showcaseSession,showcaseOverlay,workspaceObject,header,description,result,reference);
 
-            var toolDock=ProductionUIFactory.Panel(canvasObject.transform,"Tool Dock",new Vector2(.025f,.035f),new Vector2(.47f,.125f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
-            var toolRail=ProductionUIFactory.Bar(toolDock.transform,"Tools",new Vector2(.02f,.10f),new Vector2(.98f,.90f),10f);
+            // Compact floating tool dock with vector icons and real selected state.
+            var toolDock=ProductionUIFactory.Panel(canvasObject.transform,"Tool Dock",new Vector2(.025f,.035f),new Vector2(.50f,.125f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
+            var toolRail=ProductionUIFactory.Bar(toolDock.transform,"Tools",new Vector2(.025f,.09f),new Vector2(.975f,.91f),8f);
             Button drawButton=null,eraseButton=null;
-            drawButton=ProductionUIFactory.Button(toolRail.transform,"DRAW",()=>{editor.SetTool(FlowEditorTool.Draw);drawButton.GetComponent<ProductionButton>().SetSelected(true);eraseButton.GetComponent<ProductionButton>().SetSelected(false);});
-            eraseButton=ProductionUIFactory.Button(toolRail.transform,"ERASE",()=>{editor.SetTool(FlowEditorTool.Erase);drawButton.GetComponent<ProductionButton>().SetSelected(false);eraseButton.GetComponent<ProductionButton>().SetSelected(true);});
-            ProductionUIFactory.Button(toolRail.transform,"UNDO",editor.Undo,ProductionButton.Variant.Icon,16);
-            ProductionUIFactory.Button(toolRail.transform,"VIEW",()=>visualizer.CycleViewMode(),ProductionButton.Variant.Icon,16);
+            drawButton=ProductionUIFactory.ToolButton(toolRail.transform,"DRAW",ProductionIconGraphic.Icon.Draw,()=>{editor.SetTool(FlowEditorTool.Draw);drawButton.GetComponent<ProductionButton>().SetSelected(true);eraseButton.GetComponent<ProductionButton>().SetSelected(false);},100f);
+            eraseButton=ProductionUIFactory.ToolButton(toolRail.transform,"ERASE",ProductionIconGraphic.Icon.Erase,()=>{editor.SetTool(FlowEditorTool.Erase);drawButton.GetComponent<ProductionButton>().SetSelected(false);eraseButton.GetComponent<ProductionButton>().SetSelected(true);},100f);
+            ProductionUIFactory.ToolButton(toolRail.transform,"UNDO",ProductionIconGraphic.Icon.Undo,editor.Undo,92f);
+            ProductionUIFactory.ToolButton(toolRail.transform,"VIEW",ProductionIconGraphic.Icon.View,()=>visualizer.CycleViewMode(),92f);
             drawButton.GetComponent<ProductionButton>().SetSelected(true);
 
-            var actionDock=ProductionUIFactory.Panel(canvasObject.transform,"Action Dock",new Vector2(.65f,.035f),new Vector2(.975f,.125f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
-            var actionRail=ProductionUIFactory.Bar(actionDock.transform,"Actions",new Vector2(.025f,.10f),new Vector2(.975f,.90f),10f);
-            var resetButton=ProductionUIFactory.Button(actionRail.transform,"↻",modeController.Reset,ProductionButton.Variant.Icon,24);
-            var primaryButton=ProductionUIFactory.Button(actionRail.transform,"RUN FLOW  ▶",()=>{},ProductionButton.Variant.Primary,18);var primaryLabel=primaryButton.GetComponentInChildren<Text>();
-            var nextButton=ProductionUIFactory.Button(actionRail.transform,"NEXT",()=>{},ProductionButton.Variant.Primary,16);nextButton.gameObject.SetActive(false);
-            var prevButton=ProductionUIFactory.Button(actionRail.transform,"PREV",modeController.Previous,ProductionButton.Variant.Icon,15);prevButton.gameObject.SetActive(false);
+            // Only one secondary action and one dominant CTA. No font-dependent glyph buttons.
+            var actionDock=ProductionUIFactory.Panel(canvasObject.transform,"Action Dock",new Vector2(.64f,.035f),new Vector2(.975f,.125f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
+            var actionRail=ProductionUIFactory.Bar(actionDock.transform,"Actions",new Vector2(.035f,.09f),new Vector2(.965f,.91f),10f);
+            var resetButton=ProductionUIFactory.IconButton(actionRail.transform,ProductionIconGraphic.Icon.Reset,modeController.Reset,72f);
+            var primaryButton=ProductionUIFactory.PrimaryActionButton(actionRail.transform,"RUN FLOW",()=>{},224f);var primaryLabel=primaryButton.GetComponentInChildren<Text>();
+            var nextButton=ProductionUIFactory.Button(actionRail.transform,"NEXT",()=>{},ProductionButton.Variant.Primary,16,110f);nextButton.gameObject.SetActive(false);
+            var prevButton=ProductionUIFactory.IconButton(actionRail.transform,ProductionIconGraphic.Icon.Undo,modeController.Previous,72f);prevButton.gameObject.SetActive(false);
 
             var play=root.AddComponent<FlowChallengePlayController>();play.Configure(controller,challengeSession);
             var experience=root.AddComponent<FlowChallengeExperience>();experience.Configure(play,challengeSession,editor,toolDock,resultCard,hint,primaryButton,primaryLabel,nextButton);
