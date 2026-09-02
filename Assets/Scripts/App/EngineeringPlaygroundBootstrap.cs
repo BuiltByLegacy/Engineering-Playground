@@ -44,6 +44,9 @@ namespace EngineeringPlayground.App
             var tracerObject=new GameObject("Flow Streaks",typeof(RectTransform),typeof(CanvasRenderer),typeof(FlowTracerOverlay));tracerObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(tracerObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);tracerObject.GetComponent<FlowTracerOverlay>().Configure(controller);
 
+            var obstacleObject=new GameObject("Fixed Challenge Obstacle",typeof(RectTransform),typeof(CanvasRenderer),typeof(PipeObstacleOverlay));obstacleObject.transform.SetParent(workspaceObject.transform,false);
+            ProductionUIFactory.Stretch(obstacleObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);obstacleObject.GetComponent<PipeObstacleOverlay>().Configure(controller);
+
             var handlesObject=new GameObject("Pipe Route Handles",typeof(RectTransform),typeof(CanvasRenderer),typeof(PipeHandleOverlay));handlesObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(handlesObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var pipeHandles=handlesObject.GetComponent<PipeHandleOverlay>();pipeHandles.Configure(controller);
 
