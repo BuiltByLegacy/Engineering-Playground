@@ -8,11 +8,12 @@ namespace EngineeringPlayground.Flow.Challenges
     public sealed class FlowChallengeExperience : MonoBehaviour
     {
         private FlowChallengePlayController _play; private FlowChallengeSession _session; private FlowTouchEditor _editor; private GameObject _toolDock; private GameObject _resultCard; private Text _hint; private Button _primaryButton; private Text _primaryLabel; private Button _nextButton; private bool _challengeModeActive=true;
-        private ProductionToast _toast; private ProductionResultSheet _sheet;
+        private ProductionToast _toast; private ProductionResultSheet _sheet; private GameObject _hintRoot;
 
         public void Configure(FlowChallengePlayController play,FlowChallengeSession session,FlowTouchEditor editor,GameObject toolDock,GameObject resultCard,Text hint,Button primaryButton,Text primaryLabel,Button nextButton)
         {
             _play=play;_session=session;_editor=editor;_toolDock=toolDock;_resultCard=resultCard;_hint=hint;_primaryButton=primaryButton;_primaryLabel=primaryLabel;_nextButton=nextButton;
+            _hintRoot=hint!=null?hint.transform.parent.gameObject:null;
             _toast=hint!=null?hint.GetComponentInParent<ProductionToast>():null;_sheet=resultCard!=null?resultCard.GetComponent<ProductionResultSheet>():null;
             _play.StateChanged+=OnStateChanged;_play.ResultsReady+=OnResultsReady;_session.ChallengeChanged+=OnChallengeChanged;Refresh();
         }
@@ -39,14 +40,28 @@ namespace EngineeringPlayground.Flow.Challenges
             if(!_challengeModeActive||_play==null)return;
             var state=_play.State;var running=state==FlowPlayState.Running;var results=state==FlowPlayState.Results;
             if(_toolDock!=null)_toolDock.SetActive(!running&&!results);if(_editor!=null)_editor.enabled=!running&&!results;SetResults(results,false);if(_primaryButton!=null)_primaryButton.interactable=!running;
-            if(_primaryLabel!=null)_primaryLabel.text=running?"FLOWING…":results?"TRY AGAIN":"RUN FLOW  ▶";
+            if(_primaryLabel!=null)_primaryLabel.text=running?"FLOWING…":results?"TRY AGAIN":"RUN FLOW";
             if(_nextButton!=null){_nextButton.gameObject.SetActive(results);_nextButton.interactable=results&&_session.CanGoNext;}
 
-            if(_hint==null)return;var first=_session.CurrentIndex==0;SetHint(first&&!results,false);if(!first)return;
-            _hint.text=running?"Watch for bunching or curling — that's energy being lost.":"DRAW a smoother path, then RUN FLOW.";
+            if(_hint==null)return;
+            var tutorial=_session.CurrentIndex==0;
+            if(tutorial&&!results)
+            {
+                if(_hintRoot!=null&&!_hintRoot.activeSelf)_hintRoot.SetActive(true);
+                SetHint(true,false);
+                _hint.text=running?"Watch the streaks. Curling flow means energy is being lost.":"DRAW a smoother path, then RUN FLOW.";
+            }
+            else
+            {
+                SetHint(false,true);
+            }
         }
 
-        private void SetHint(bool visible,bool immediate){if(_toast!=null)_toast.SetVisible(visible,immediate);else if(_hint!=null)_hint.gameObject.SetActive(visible);}
+        private void SetHint(bool visible,bool immediate)
+        {
+            if(!visible&&immediate&&_hintRoot!=null){_hintRoot.SetActive(false);return;}
+            if(_toast!=null)_toast.SetVisible(visible,immediate);else if(_hintRoot!=null)_hintRoot.SetActive(visible);
+        }
         private void SetResults(bool visible,bool immediate){if(_sheet!=null)_sheet.SetVisible(visible,immediate);else if(_resultCard!=null)_resultCard.SetActive(visible);}
     }
 }
