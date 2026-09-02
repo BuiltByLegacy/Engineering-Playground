@@ -19,8 +19,10 @@ namespace EngineeringPlayground.Flow.Challenges
         public void Refresh()
         {
             if(_session?.CurrentChallenge==null)return;
-            if(_header!=null)_header.text=_session.GetChallengeHeader();
-            if(_description!=null)_description.text=_session.CurrentChallenge.Description;
+            var level=_session.CurrentChallenge.Campaign.Value<int?>("level_number")??(_session.CurrentIndex+1);
+            var progress=_session.Progress.GetChallenge(_session.CurrentChallenge.ChallengeId);
+            if(_header!=null)_header.text=_session.CurrentChallenge.Title.ToUpperInvariant();
+            if(_description!=null)_description.text=$"LEVEL {level}/{_session.ChallengeCount}   {Stars(progress.Stars)}";
             if(_result!=null)_result.text=string.Empty;
             if(_metrics!=null)foreach(var metric in _metrics)metric?.SetValue(0);
         }
