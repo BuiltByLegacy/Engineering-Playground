@@ -18,6 +18,9 @@ namespace EngineeringPlayground.Flow.Runtime
         public PipePathModel PipePath { get; private set; }
         public int CurrentPipeLevel { get; private set; } = 1;
         public bool Running => running;
+        public bool HasFixedObstacle => CurrentPipeLevel == 2;
+        public Vector2 FixedObstacleCenter => new(.52f,.50f);
+        public float FixedObstacleRadius => .055f;
         public event Action SolverUpdated;
 
         private void Awake()
@@ -45,7 +48,7 @@ namespace EngineeringPlayground.Flow.Runtime
         public void ApplyPipePreset(int level)
         {
             CurrentPipeLevel = Mathf.Max(1, level);
-            var radius = CurrentPipeLevel==4 ? .075f : CurrentPipeLevel==5 ? .11f : .09f;
+            var radius = CurrentPipeLevel switch { 2 => .075f, 4 => .075f, 5 => .11f, _ => .09f };
             PipePath.SetPreset(PipePathPresets.ForLevel(CurrentPipeLevel), radius);
         }
 
@@ -56,7 +59,7 @@ namespace EngineeringPlayground.Flow.Runtime
         {
             if(Solver==null||PipePath==null)return;
             var mask=PipeSolverAdapter.BuildSolidMask(Solver,PipePath);
-            if(CurrentPipeLevel==2) AddFixedCircularObstacle(mask,.52f,.50f,.065f);
+            if(HasFixedObstacle) AddFixedCircularObstacle(mask,FixedObstacleCenter.x,FixedObstacleCenter.y,FixedObstacleRadius);
             Solver.ApplySolidMask(mask,true);
             running=false;
             SolverUpdated?.Invoke();
