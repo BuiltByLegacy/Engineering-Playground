@@ -1,4 +1,5 @@
 using EngineeringPlayground.Flow.Challenges;
+using EngineeringPlayground.Flow.Pipes;
 using EngineeringPlayground.Flow.Runtime;
 using EngineeringPlayground.Flow.Showcases;
 using EngineeringPlayground.UI;
@@ -26,7 +27,6 @@ namespace EngineeringPlayground.App
             canvasObject.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay;canvasObject.GetComponent<Image>().color=EngineeringPlaygroundTheme.Canvas;canvasObject.GetComponent<Image>().raycastTarget=false;
             var scaler=canvasObject.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);scaler.matchWidthOrHeight=.5f;
 
-            // Compact phone-first HUD: level title is the hero, progress/stars are secondary.
             var hudPanel=ProductionUIFactory.Panel(canvasObject.transform,"Level HUD",new Vector2(.025f,.91f),new Vector2(.975f,.978f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
             var header=ProductionUIFactory.Text(hudPanel.transform,"Header",new Vector2(.035f,.12f),new Vector2(.70f,.88f),29,TextAnchor.MiddleLeft,EngineeringPlaygroundTheme.Text,FontStyle.Bold);
             var description=ProductionUIFactory.Text(hudPanel.transform,"Progress",new Vector2(.71f,.12f),new Vector2(.96f,.88f),17,TextAnchor.MiddleRight,EngineeringPlaygroundTheme.TextMuted,FontStyle.Bold);
@@ -44,10 +44,12 @@ namespace EngineeringPlayground.App
             var tracerObject=new GameObject("Flow Streaks",typeof(RectTransform),typeof(CanvasRenderer),typeof(FlowTracerOverlay));tracerObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(tracerObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);tracerObject.GetComponent<FlowTracerOverlay>().Configure(controller);
 
+            var handlesObject=new GameObject("Pipe Route Handles",typeof(RectTransform),typeof(CanvasRenderer),typeof(PipeHandleOverlay));handlesObject.transform.SetParent(workspaceObject.transform,false);
+            ProductionUIFactory.Stretch(handlesObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var pipeHandles=handlesObject.GetComponent<PipeHandleOverlay>();pipeHandles.Configure(controller);
+
             var overlayObject=new GameObject("Showcase Packaging Overlay",typeof(RectTransform),typeof(ShowcasePackagingOverlay));overlayObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(overlayObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var showcaseOverlay=overlayObject.GetComponent<ShowcasePackagingOverlay>();showcaseOverlay.Configure(showcaseSession);showcaseOverlay.SetVisible(false);
 
-            // Direction chips replace tiny diagnostic labels.
             var inletChip=ProductionUIFactory.Panel(workspaceFrame.transform,"Inlet Chip",new Vector2(.018f,.455f),new Vector2(.115f,.545f),new Color32(8,31,40,225),EngineeringPlaygroundTheme.RadiusMedium);
             var inlet=ProductionUIFactory.Text(inletChip.transform,"Inlet",new Vector2(.08f,.08f),new Vector2(.92f,.92f),15,TextAnchor.MiddleCenter,EngineeringPlaygroundTheme.Accent,FontStyle.Bold);inlet.text="IN  →";
             var outletChip=ProductionUIFactory.Panel(workspaceFrame.transform,"Outlet Chip",new Vector2(.885f,.455f),new Vector2(.982f,.545f),new Color32(8,31,40,225),EngineeringPlaygroundTheme.RadiusMedium);
@@ -61,17 +63,13 @@ namespace EngineeringPlayground.App
             resultCard.AddComponent<CanvasGroup>();resultCard.AddComponent<ProductionResultSheet>();
             var result=ProductionUIFactory.Text(resultCard.transform,"Result",new Vector2(.055f,.60f),new Vector2(.945f,.93f),21,TextAnchor.UpperLeft,EngineeringPlaygroundTheme.Text);
             var metricNames=new[]{"Flow","Pressure","Smoothness","Material"};var metrics=new ProductionMetricRow[4];
-            for(var i=0;i<4;i++)
-            {
-                var row=new GameObject(metricNames[i],typeof(RectTransform),typeof(ProductionMetricRow));row.transform.SetParent(resultCard.transform,false);var yMax=.55f-i*.105f;ProductionUIFactory.Stretch(row.GetComponent<RectTransform>(),new Vector2(.055f,yMax-.08f),new Vector2(.945f,yMax));metrics[i]=row.GetComponent<ProductionMetricRow>();metrics[i].Configure(metricNames[i]);
-            }
+            for(var i=0;i<4;i++){var row=new GameObject(metricNames[i],typeof(RectTransform),typeof(ProductionMetricRow));row.transform.SetParent(resultCard.transform,false);var yMax=.55f-i*.105f;ProductionUIFactory.Stretch(row.GetComponent<RectTransform>(),new Vector2(.055f,yMax-.08f),new Vector2(.945f,yMax));metrics[i]=row.GetComponent<ProductionMetricRow>();metrics[i].Configure(metricNames[i]);}
             resultCard.SetActive(false);
             var reference=ProductionUIFactory.Text(canvasObject.transform,"Reference Estimate",new Vector2(.04f,.18f),new Vector2(.96f,.78f),17,TextAnchor.UpperLeft,EngineeringPlaygroundTheme.Text);reference.gameObject.SetActive(false);
 
             var hud=root.AddComponent<FlowChallengeHud>();hud.Configure(challengeSession,header,description,result,metrics);
             var modeController=root.AddComponent<FlowLabModeController>();modeController.Configure(controller,challengeSession,hud,showcaseSession,showcaseOverlay,workspaceObject,header,description,result,reference);
 
-            // Compact floating tool dock with vector icons and real selected state.
             var toolDock=ProductionUIFactory.Panel(canvasObject.transform,"Tool Dock",new Vector2(.025f,.035f),new Vector2(.50f,.125f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
             var toolRail=ProductionUIFactory.Bar(toolDock.transform,"Tools",new Vector2(.025f,.09f),new Vector2(.975f,.91f),8f);
             Button drawButton=null,eraseButton=null;
@@ -81,7 +79,6 @@ namespace EngineeringPlayground.App
             ProductionUIFactory.ToolButton(toolRail.transform,"VIEW",ProductionIconGraphic.Icon.View,()=>visualizer.CycleViewMode(),92f);
             drawButton.GetComponent<ProductionButton>().SetSelected(true);
 
-            // Only one secondary action and one dominant CTA. No font-dependent glyph buttons.
             var actionDock=ProductionUIFactory.Panel(canvasObject.transform,"Action Dock",new Vector2(.64f,.035f),new Vector2(.975f,.125f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
             var actionRail=ProductionUIFactory.Bar(actionDock.transform,"Actions",new Vector2(.035f,.09f),new Vector2(.965f,.91f),10f);
             var resetButton=ProductionUIFactory.IconButton(actionRail.transform,ProductionIconGraphic.Icon.Reset,modeController.Reset,72f);
@@ -90,7 +87,7 @@ namespace EngineeringPlayground.App
             var prevButton=ProductionUIFactory.IconButton(actionRail.transform,ProductionIconGraphic.Icon.Undo,modeController.Previous,72f);prevButton.gameObject.SetActive(false);
 
             var play=root.AddComponent<FlowChallengePlayController>();play.Configure(controller,challengeSession);
-            var experience=root.AddComponent<FlowChallengeExperience>();experience.Configure(play,challengeSession,editor,toolDock,resultCard,hint,primaryButton,primaryLabel,nextButton);
+            var experience=root.AddComponent<FlowChallengeExperience>();experience.Configure(play,challengeSession,editor,pipeHandles,toolDock,resultCard,hint,primaryButton,primaryLabel,nextButton);
 
             primaryButton.onClick.RemoveAllListeners();primaryButton.onClick.AddListener(()=>{if(modeController.Mode==FlowLabMode.Challenge)experience.PrimaryAction();else modeController.ToggleRunning();});
             nextButton.onClick.RemoveAllListeners();nextButton.onClick.AddListener(()=>{if(modeController.Mode==FlowLabMode.Challenge)experience.Next();else modeController.Next();});
