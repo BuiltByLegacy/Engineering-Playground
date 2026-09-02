@@ -38,7 +38,7 @@ namespace EngineeringPlayground.App
             var editor=workspaceObject.GetComponent<FlowTouchEditor>();editor.Configure(controller,workspaceRect);
 
             var solidObject=new GameObject("Smooth Geometry",typeof(RectTransform),typeof(RawImage),typeof(SmoothSolidOverlay));solidObject.transform.SetParent(workspaceObject.transform,false);
-            var solidRect=solidObject.GetComponent<RectTransform>();ProductionUIFactory.Stretch(solidRect,Vector2.zero,Vector2.one);var solidImage=solidObject.GetComponent<RawImage>();solidObject.GetComponent<SmoothSolidOverlay>().Configure(controller,solidImage);
+            ProductionUIFactory.Stretch(solidObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var solidImage=solidObject.GetComponent<RawImage>();solidObject.GetComponent<SmoothSolidOverlay>().Configure(controller,solidImage);
 
             var tracerObject=new GameObject("Flow Streaks",typeof(RectTransform),typeof(CanvasRenderer),typeof(FlowTracerOverlay));tracerObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(tracerObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);tracerObject.GetComponent<FlowTracerOverlay>().Configure(controller);
@@ -53,13 +53,18 @@ namespace EngineeringPlayground.App
             hintPanel.AddComponent<CanvasGroup>();hintPanel.AddComponent<ProductionToast>();
             var hint=ProductionUIFactory.Text(hintPanel.transform,"Hint",new Vector2(.04f,.08f),new Vector2(.96f,.92f),15,TextAnchor.MiddleLeft,EngineeringPlaygroundTheme.Text,FontStyle.Bold);
 
-            var resultCard=ProductionUIFactory.Panel(canvasObject.transform,"Result Sheet",new Vector2(.16f,.18f),new Vector2(.84f,.51f),new Color32(10,22,34,252),EngineeringPlaygroundTheme.RadiusLarge);
+            var resultCard=ProductionUIFactory.Panel(canvasObject.transform,"Result Sheet",new Vector2(.15f,.16f),new Vector2(.85f,.55f),new Color32(10,22,34,252),EngineeringPlaygroundTheme.RadiusLarge);
             resultCard.AddComponent<CanvasGroup>();resultCard.AddComponent<ProductionResultSheet>();
-            var result=ProductionUIFactory.Text(resultCard.transform,"Result",new Vector2(.055f,.10f),new Vector2(.945f,.90f),21,TextAnchor.MiddleLeft,EngineeringPlaygroundTheme.Text);
+            var result=ProductionUIFactory.Text(resultCard.transform,"Result",new Vector2(.055f,.60f),new Vector2(.945f,.93f),21,TextAnchor.UpperLeft,EngineeringPlaygroundTheme.Text);
+            var metricNames=new[]{"Flow","Pressure","Smoothness","Material"};var metrics=new ProductionMetricRow[4];
+            for(var i=0;i<4;i++)
+            {
+                var row=new GameObject(metricNames[i],typeof(RectTransform),typeof(ProductionMetricRow));row.transform.SetParent(resultCard.transform,false);var yMax=.55f-i*.105f;ProductionUIFactory.Stretch(row.GetComponent<RectTransform>(),new Vector2(.055f,yMax-.08f),new Vector2(.945f,yMax));metrics[i]=row.GetComponent<ProductionMetricRow>();metrics[i].Configure(metricNames[i]);
+            }
             resultCard.SetActive(false);
             var reference=ProductionUIFactory.Text(canvasObject.transform,"Reference Estimate",new Vector2(.04f,.18f),new Vector2(.96f,.78f),17,TextAnchor.UpperLeft,EngineeringPlaygroundTheme.Text);reference.gameObject.SetActive(false);
 
-            var hud=root.AddComponent<FlowChallengeHud>();hud.Configure(challengeSession,header,description,result);
+            var hud=root.AddComponent<FlowChallengeHud>();hud.Configure(challengeSession,header,description,result,metrics);
             var modeController=root.AddComponent<FlowLabModeController>();modeController.Configure(controller,challengeSession,hud,showcaseSession,showcaseOverlay,workspaceObject,header,description,result,reference);
 
             var toolDock=ProductionUIFactory.Panel(canvasObject.transform,"Tool Dock",new Vector2(.025f,.035f),new Vector2(.47f,.125f),EngineeringPlaygroundTheme.Surface,EngineeringPlaygroundTheme.RadiusLarge);
