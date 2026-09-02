@@ -41,7 +41,9 @@ namespace EngineeringPlayground.Flow.Challenges
             var targetOutlet = ReadDouble(targets, "outlet_speed", Math.Max(1e-9, ReadDouble(challenge.SuccessConditions, "min_outlet_speed", 0.06)));
             var targetPressure = ReadDouble(targets, "max_pressure_loss", Math.Max(1e-9, ReadDouble(challenge.SuccessConditions, "max_pressure_loss", 0.02)));
             var targetVorticity = ReadDouble(targets, "max_vorticity", 0.01);
-            var materialBudget = Math.Max(1.0, ReadDouble(challenge.Constraints, "max_added_solid_cells", 1.0));
+            var materialBudget = Math.Max(1.0,
+                ReadDouble(challenge.Constraints, "material_budget",
+                    ReadDouble(challenge.Constraints, "max_added_solid_cells", 1.0)));
 
             var dimensions = new Dictionary<string, double>
             {
@@ -55,11 +57,9 @@ namespace EngineeringPlayground.Flow.Challenges
             var totalWeight = 0.0;
             foreach (var property in challenge.ScoringWeights.Properties())
             {
-                if (!dimensions.TryGetValue(property.Name, out var dimensionScore))
-                    continue;
+                if (!dimensions.TryGetValue(property.Name, out var dimensionScore)) continue;
                 var weight = property.Value.Value<double>();
-                if (weight <= 0.0 || !double.IsFinite(weight))
-                    continue;
+                if (weight <= 0.0 || !double.IsFinite(weight)) continue;
                 weighted += dimensionScore * weight;
                 totalWeight += weight;
             }
@@ -77,7 +77,8 @@ namespace EngineeringPlayground.Flow.Challenges
                          && metrics.MeanVorticity <= maxVorticity
                          && score >= minimumScore;
 
-            var feedback = BuildFeedback(dimensions);
+            var pipeFirst = challenge.DomainConfig?.Value<bool?>("pipe_first") == true;
+            var feedback = BuildFeedback(dimensions, pipeFirst);
             var grade = Grade(score);
             var stars = passed ? StarsForScore(challenge, score) : 0;
 
@@ -92,7 +93,7 @@ namespace EngineeringPlayground.Flow.Challenges
             };
         }
 
-        private static IReadOnlyList<string> BuildFeedback(IReadOnlyDictionary<string, double> dimensions)
+        private static IReadOnlyList<string> BuildFeedback(IReadOnlyDictionary<string, double> dimensions, bool pipeFirst)
         {
             var feedback = new List<string>();
             var weakestName = string.Empty;
@@ -109,10 +110,10 @@ namespace EngineeringPlayground.Flow.Challenges
             feedback.Add($"Flow {Label(dimensions["flow"])} · Pressure {Label(dimensions["pressure"])} · Swirl {Label(dimensions["turbulence"])}");
             feedback.Add(weakestName switch
             {
-                "flow" => "Try opening or smoothing the flow path.",
+                "flow" => pipeFirst ? "Open the route and smooth tight bends so more flow reaches OUT." : "Try opening or smoothing the flow path.",
                 "pressure" => "Reduce sharp restrictions and abrupt turns.",
                 "turbulence" => "Smooth transitions and reduce sudden direction changes.",
-                "material" => "Trim geometry that is not helping the design.",
+                "material" => pipeFirst ? "Shorten unnecessary route length without introducing sharp bends." : "Trim geometry that is not helping the design.",
                 _ => "Keep iterating on the weakest part of the design."
             });
             return feedback;
@@ -120,48 +121,26 @@ namespace EngineeringPlayground.Flow.Challenges
 
         private static int StarsForScore(ChallengeDefinition challenge, double score)
         {
-            if (challenge.Rewards["target_scores"] is not JArray targets || targets.Count == 0)
-                return 1;
-
+            if (challenge.Rewards["target_scores"] is not JArray targets || targets.Count == 0) return 1;
             var stars = 0;
             for (var i = 0; i < Math.Min(3, targets.Count); i++)
             {
                 var target = targets[i];
-                if (target != null && score >= target.Value<double>())
-                    stars = i + 1;
+                if (target != null && score >= target.Value<double>()) stars = i + 1;
             }
             return Math.Max(1, stars);
         }
 
-        private static string Grade(double score) => score switch
-        {
-            >= 90.0 => "S",
-            >= 80.0 => "A",
-            >= 70.0 => "B",
-            >= 60.0 => "C",
-            _ => "D"
-        };
-
-        private static string Label(double score) => score switch
-        {
-            >= 85.0 => "GREAT",
-            >= 70.0 => "GOOD",
-            >= 50.0 => "OK",
-            _ => "LOW"
-        };
-
+        private static string Grade(double score) => score switch { >= 90.0 => "S", >= 80.0 => "A", >= 70.0 => "B", >= 60.0 => "C", _ => "D" };
+        private static string Label(double score) => score switch { >= 85.0 => "GREAT", >= 70.0 => "GOOD", >= 50.0 => "OK", _ => "LOW" };
         private static double ReadDouble(JObject source, string key, double fallback)
         {
-            var token = source[key];
-            if (token == null || token.Type == JTokenType.Null)
-                return fallback;
+            var token = source?[key];
+            if (token == null || token.Type == JTokenType.Null) return fallback;
             var value = token.Value<double>();
             return double.IsFinite(value) ? value : fallback;
         }
-
-        private static double SafeRatio(double numerator, double denominator) =>
-            denominator > 1e-12 ? numerator / denominator : 0.0;
-
+        private static double SafeRatio(double numerator, double denominator) => denominator > 1e-12 ? numerator / denominator : 0.0;
         private static double Clamp100(double value) => Math.Clamp(value, 0.0, 100.0);
     }
 }
