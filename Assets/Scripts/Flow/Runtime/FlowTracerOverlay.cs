@@ -40,8 +40,27 @@ namespace EngineeringPlayground.Flow.Runtime
                 vh.AddVert(a-normal*width*.45f,c0,Vector2.zero);vh.AddVert(a+normal*width*.45f,c0,Vector2.zero);vh.AddVert(b+normal*width,c1,Vector2.zero);vh.AddVert(b-normal*width,c1,Vector2.zero);vh.AddTriangle(start,start+1,start+2);vh.AddTriangle(start,start+2,start+3);
             }
         }
+
         private static Vector2 ToLocal(Rect r,Vector2 p)=>new(r.xMin+p.x*r.width,r.yMin+p.y*r.height);
         private void Seed(){_tracers.Clear();for(var i=0;i<_targetCount;i++)_tracers.Add(Respawn(i,true));SetVerticesDirty();}
-        private Tracer Respawn(int index,bool distributed=false){var lane=Mathf.Repeat(index*.6180339f,1f);var p=new Vector2(distributed?Mathf.Repeat(index/(float)Mathf.Max(1,_targetCount)+lane*.15f,.95f):.015f,.06f+lane*.88f);return new Tracer{Position=p,Previous=p-new Vector2(.012f,0),Life=3.5f+lane*4f,Phase=lane*6.28318f};}
+
+        private Tracer Respawn(int index,bool distributed=false)
+        {
+            var lane=Mathf.Repeat(index*.6180339f,1f);
+            Vector2 p;
+            if(_controller?.PipePath!=null)
+            {
+                var center=_controller.PipePath.Sample(0f);
+                var usableRadius=_controller.PipePath.Radius*.78f;
+                var y=center.y+Mathf.Lerp(-usableRadius,usableRadius,lane);
+                var x=distributed?Mathf.Lerp(.012f,.11f,Mathf.Repeat(index*.381966f,1f)):.015f;
+                p=new Vector2(x,Mathf.Clamp01(y));
+            }
+            else
+            {
+                p=new Vector2(distributed?Mathf.Repeat(index/(float)Mathf.Max(1,_targetCount)+lane*.15f,.95f):.015f,.06f+lane*.88f);
+            }
+            return new Tracer{Position=p,Previous=p-new Vector2(.012f,0),Life=3.5f+lane*4f,Phase=lane*6.28318f};
+        }
     }
 }
