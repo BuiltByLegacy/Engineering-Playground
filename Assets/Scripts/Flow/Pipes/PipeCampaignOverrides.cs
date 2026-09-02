@@ -42,7 +42,8 @@ namespace EngineeringPlayground.Flow.Pipes
             c.ScoringWeights=new JObject{{"flow",s.Flow},{"pressure",s.Pressure},{"turbulence",s.Turbulence},{"material",s.Material}};
             c.ConceptUnlocks=new List<string>(s.Concepts);c.Hints=new List<string>(s.Hints);
             c.Rewards=new JObject{{"stars",1},{"target_scores",new JArray(s.MinimumScore,s.MinimumScore+10,s.MinimumScore+20)}};
-            c.DomainConfig["pipe_first"]=true;c.DomainConfig["pipe_radius"]=level==4?.075:level==5?.11:.09;
+            c.DomainConfig["pipe_first"]=true;
+            c.DomainConfig["pipe_radius"]=level switch { 2 => .075, 4 => .075, 5 => .11, _ => .09 };
         }
     }
 }
