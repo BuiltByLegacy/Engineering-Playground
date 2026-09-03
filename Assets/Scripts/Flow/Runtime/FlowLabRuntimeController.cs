@@ -48,11 +48,18 @@ namespace EngineeringPlayground.Flow.Runtime
         public void ApplyPipePreset(int level)
         {
             CurrentPipeLevel = Mathf.Max(1, level);
-            var radius = CurrentPipeLevel switch { 2 => .075f, 4 => .075f, 5 => .11f, _ => .09f };
-            PipePath.SetPreset(PipePathPresets.ForLevel(CurrentPipeLevel), radius);
+            var points=PipePathPresets.ForLevel(CurrentPipeLevel);
+            var profile=PipePathPresets.RadiusProfileForLevel(CurrentPipeLevel);
+            if(profile!=null)PipePath.SetPreset(points,profile);
+            else
+            {
+                var radius = CurrentPipeLevel switch { 2 => .075f, _ => .09f };
+                PipePath.SetPreset(points,radius);
+            }
         }
 
         public void MovePipeHandle(int index, Vector2 normalizedPosition) => PipePath.MovePoint(index, normalizedPosition);
+        public void SetPipeRadiusHandle(int index,float radius)=>PipePath.SetRadiusAtPoint(index,radius);
         public void ResetPipePath() => PipePath.ResetToPreset();
 
         private void ApplyPipePath()
