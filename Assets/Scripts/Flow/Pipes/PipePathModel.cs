@@ -14,7 +14,10 @@ namespace EngineeringPlayground.Flow.Pipes
         public float RouteLength { get; private set; }
         public float CurvatureCost { get; private set; }
         public float MinimumBendRadius { get; private set; } = 999f;
-        public float RequiredMinimumBendRadius => Mathf.Max(.08f, Radius * 1.35f);
+        // This is intentionally a game guardrail rather than an industry-code pipe-bend rule.
+        // It prevents obviously kinked solver geometry while still allowing the early presets to be improved by the player.
+        public float RequiredMinimumBendRadius => Mathf.Max(.045f, Radius * .9f);
+        public bool MeetsBendRadiusGuardrail => MinimumBendRadius + 1e-4f >= RequiredMinimumBendRadius;
         public event Action Changed;
 
         public void SetPreset(IEnumerable<Vector2> points, float radius)
@@ -35,19 +38,39 @@ namespace EngineeringPlayground.Flow.Pipes
             if (index <= 0 || index >= _points.Count - 1) return;
             var minX = _points[index - 1].x + .035f;
             var maxX = _points[index + 1].x - .035f;
-            var p = ClampPoint(position); p.x = Mathf.Clamp(p.x, minX, maxX);
+            var target = ClampPoint(position); target.x = Mathf.Clamp(target.x, minX, maxX);
 
             var original = _points[index];
-            _points[index] = p;
+            var originalMinRadius = MinimumBendRadius;
+
+            // Try the full finger position first.
+            _points[index] = target;
             Recalculate();
-            if (MinimumBendRadius + 1e-4f < RequiredMinimumBendRadius)
+            if (IsMoveAcceptable(originalMinRadius)) { Changed?.Invoke(); return; }
+
+            // Instead of snapping back, project the drag onto the nearest acceptable position.
+            // This makes the handle feel like it is pushing against a physical bend-radius constraint.
+            var best = original;
+            var low = 0f; var high = 1f;
+            for (var i=0;i<10;i++)
             {
-                // Reject finger positions that would create a kink sharper than the physical design rule.
-                _points[index] = original;
+                var mid = (low + high) * .5f;
+                _points[index] = Vector2.Lerp(original, target, mid);
                 Recalculate();
-                return;
+                if (IsMoveAcceptable(originalMinRadius)) { best = _points[index]; low = mid; }
+                else high = mid;
             }
+            _points[index] = best;
+            Recalculate();
             Changed?.Invoke();
+        }
+
+        private bool IsMoveAcceptable(float originalMinRadius)
+        {
+            if (MeetsBendRadiusGuardrail) return true;
+            // Some authored teaching presets deliberately start below the ideal guardrail. While in that
+            // state, allow only moves that maintain or improve the existing minimum bend radius.
+            return MinimumBendRadius + 1e-4f >= originalMinRadius;
         }
 
         public Vector2 Sample(float t)
