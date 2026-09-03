@@ -13,14 +13,24 @@ namespace EngineeringPlayground.Tests.EditMode
             var path=new PipePathModel();
             path.SetPreset(PipePathPresets.ForLevel(1),.09f);
             var before=path.RouteLength;
-            path.MovePoint(1,new Vector2(.34f,.72f));
+            path.MovePoint(1,new Vector2(.34f,.60f));
             Assert.That(path.RouteLength,Is.GreaterThan(before));
+        }
+
+        [Test]
+        public void MovingHandle_CannotMakeBendRadiusWorseBelowGuardrail()
+        {
+            var path=new PipePathModel();
+            path.SetPreset(PipePathPresets.ForLevel(2),.075f);
+            var before=path.MinimumBendRadius;
+            path.MovePoint(2,new Vector2(.50f,.90f));
+            Assert.That(path.MinimumBendRadius,Is.GreaterThanOrEqualTo(before-0.0002f));
         }
 
         [Test]
         public void PipeMask_OpensCenterlineAndClosesEnvironment()
         {
-            var solver=new D2Q9LbmSolver(96,54);
+            var solver=new D2Q9LbmSolver(160,90);
             var path=new PipePathModel();
             path.SetPreset(PipePathPresets.ForLevel(1),.09f);
             var mask=PipeSolverAdapter.BuildSolidMask(solver,path);
@@ -31,9 +41,28 @@ namespace EngineeringPlayground.Tests.EditMode
         }
 
         [Test]
+        public void SupersampledPipeMask_HasConsistentStraightPipeDiameter()
+        {
+            var solver=new D2Q9LbmSolver(160,90);
+            var path=new PipePathModel();
+            path.SetPreset(PipePathPresets.ForLevel(1),.09f);
+            var mask=PipeSolverAdapter.BuildSolidMask(solver,path);
+
+            var min=int.MaxValue;var max=0;
+            for(var x=12;x<solver.Width-12;x+=8)
+            {
+                var open=0;
+                for(var y=1;y<solver.Height-1;y++) if(!mask[y*solver.Width+x]) open++;
+                min=Mathf.Min(min,open);max=Mathf.Max(max,open);
+            }
+            Assert.That(min,Is.GreaterThanOrEqualTo(14),"High-resolution pipe should have enough fluid cells across its diameter.");
+            Assert.That(max-min,Is.LessThanOrEqualTo(2),"A straight pipe should not have a visibly stair-stepped changing diameter.");
+        }
+
+        [Test]
         public void PipeMask_ConstrainsInletCrossSection()
         {
-            var solver=new D2Q9LbmSolver(96,54);
+            var solver=new D2Q9LbmSolver(160,90);
             var path=new PipePathModel();
             path.SetPreset(PipePathPresets.ForLevel(1),.09f);
             PipeSolverAdapter.Apply(solver,path);
@@ -44,13 +73,13 @@ namespace EngineeringPlayground.Tests.EditMode
         }
 
         [Test]
-        public void StraightPipe_RemainsFiniteAndDeliversOutletFlow()
+        public void StraightPipe_RemainsFiniteAndDeliversOutletFlowAtProductionResolution()
         {
-            var solver=new D2Q9LbmSolver(96,54);
+            var solver=new D2Q9LbmSolver(160,90);
             var path=new PipePathModel();
             path.SetPreset(PipePathPresets.ForLevel(1),.09f);
             PipeSolverAdapter.Apply(solver,path);
-            solver.Step(600);
+            solver.Step(900);
 
             Assert.That(solver.IsFinite(),Is.True);
             Assert.That(solver.MeanOutletSpeed(),Is.GreaterThan(0.0));
@@ -59,14 +88,14 @@ namespace EngineeringPlayground.Tests.EditMode
         [Test]
         public void SmoothDetour_DefaultPreset_RemainsFiniteAndDeliversVisibleOutletFlow()
         {
-            var solver=new D2Q9LbmSolver(96,54,1.82,0.05);
+            var solver=new D2Q9LbmSolver(160,90,1.82,0.05);
             var path=new PipePathModel();
             path.SetPreset(PipePathPresets.ForLevel(2),.075f);
             var mask=PipeSolverAdapter.BuildSolidMask(solver,path);
 
             AddCircularObstacle(mask,solver,.52f,.50f,.055f);
             solver.ApplySolidMask(mask,true);
-            solver.Step(1200);
+            solver.Step(1500);
 
             Assert.That(solver.IsFinite(),Is.True,"Level 2 default route must remain numerically stable.");
             Assert.That(solver.MeanOutletSpeed(),Is.GreaterThan(0.006),"Default Smooth Detour must deliver measurable flow to OUT rather than visually stalling upstream.");
