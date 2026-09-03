@@ -13,6 +13,8 @@ namespace EngineeringPlayground.Flow.Pipes
         public float Radius { get; private set; } = .09f;
         public float RouteLength { get; private set; }
         public float CurvatureCost { get; private set; }
+        public float MinimumBendRadius { get; private set; } = 999f;
+        public float RequiredMinimumBendRadius => Mathf.Max(.08f, Radius * 1.35f);
         public event Action Changed;
 
         public void SetPreset(IEnumerable<Vector2> points, float radius)
@@ -34,7 +36,18 @@ namespace EngineeringPlayground.Flow.Pipes
             var minX = _points[index - 1].x + .035f;
             var maxX = _points[index + 1].x - .035f;
             var p = ClampPoint(position); p.x = Mathf.Clamp(p.x, minX, maxX);
-            _points[index] = p; Recalculate(); Changed?.Invoke();
+
+            var original = _points[index];
+            _points[index] = p;
+            Recalculate();
+            if (MinimumBendRadius + 1e-4f < RequiredMinimumBendRadius)
+            {
+                // Reject finger positions that would create a kink sharper than the physical design rule.
+                _points[index] = original;
+                Recalculate();
+                return;
+            }
+            Changed?.Invoke();
         }
 
         public Vector2 Sample(float t)
@@ -49,31 +62,47 @@ namespace EngineeringPlayground.Flow.Pipes
             var p1 = _points[i];
             var p2 = _points[i + 1];
             var p3 = _points[Mathf.Min(_points.Count - 1, i + 2)];
-
-            // Cardinal spline with mild tension. It preserves the satisfying smooth route edit while
-            // reducing Catmull-Rom overshoot that made early pipe presets balloon into giant arcs.
             const float tension = .35f;
             var m1 = (1f - tension) * .5f * (p2 - p0);
             var m2 = (1f - tension) * .5f * (p3 - p1);
             var u2 = u * u; var u3 = u2 * u;
-            var h00 = 2f*u3 - 3f*u2 + 1f;
-            var h10 = u3 - 2f*u2 + u;
-            var h01 = -2f*u3 + 3f*u2;
-            var h11 = u3 - u2;
-            return h00*p1 + h10*m1 + h01*p2 + h11*m2;
+            return (2f*u3 - 3f*u2 + 1f)*p1 + (u3 - 2f*u2 + u)*m1 + (-2f*u3 + 3f*u2)*p2 + (u3 - u2)*m2;
         }
 
         private void Recalculate()
         {
-            RouteLength = 0f; CurvatureCost = 0f;
-            var prev = Sample(0); var prevDir = Vector2.right;
-            const int samples = 128;
+            RouteLength = 0f; CurvatureCost = 0f; MinimumBendRadius = 999f;
+            const int samples = 192;
+            var previous = Sample(0f);
+            var beforePrevious = previous;
+            var previousDir = Vector2.right;
             for (var i=1;i<=samples;i++)
             {
-                var p=Sample(i/(float)samples); var d=p-prev; RouteLength += d.magnitude;
-                if(d.sqrMagnitude>1e-6f){var dir=d.normalized; CurvatureCost += Vector2.Angle(prevDir,dir)/180f; prevDir=dir;}
-                prev=p;
+                var p = Sample(i/(float)samples);
+                var d = p - previous;
+                RouteLength += d.magnitude;
+                if (d.sqrMagnitude > 1e-8f)
+                {
+                    var dir = d.normalized;
+                    CurvatureCost += Vector2.Angle(previousDir, dir) / 180f;
+                    previousDir = dir;
+                }
+                if (i >= 2)
+                {
+                    var r = Circumradius(beforePrevious, previous, p);
+                    if (r < MinimumBendRadius) MinimumBendRadius = r;
+                }
+                beforePrevious = previous;
+                previous = p;
             }
+        }
+
+        private static float Circumradius(Vector2 a, Vector2 b, Vector2 c)
+        {
+            var ab = Vector2.Distance(a,b); var bc = Vector2.Distance(b,c); var ca = Vector2.Distance(c,a);
+            var twiceArea = Mathf.Abs((b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x));
+            if (twiceArea < 1e-7f || ab < 1e-6f || bc < 1e-6f || ca < 1e-6f) return 999f;
+            return ab * bc * ca / (2f * twiceArea);
         }
 
         private static Vector2 ClampPoint(Vector2 p) => new(Mathf.Clamp(p.x,.02f,.98f), Mathf.Clamp(p.y,.08f,.92f));
@@ -86,8 +115,6 @@ namespace EngineeringPlayground.Flow.Pipes
             return level switch
             {
                 1 => new[]{new Vector2(.02f,.5f),new Vector2(.34f,.5f),new Vector2(.66f,.5f),new Vector2(.98f,.5f)},
-                // A plausible but improvable detour: the obstacle is immediately understandable and the
-                // player has room to make the arc gentler instead of starting from an exaggerated mountain.
                 2 => new[]{new Vector2(.02f,.5f),new Vector2(.28f,.58f),new Vector2(.50f,.66f),new Vector2(.72f,.58f),new Vector2(.98f,.5f)},
                 3 => new[]{new Vector2(.02f,.5f),new Vector2(.27f,.66f),new Vector2(.50f,.70f),new Vector2(.73f,.58f),new Vector2(.98f,.5f)},
                 4 => new[]{new Vector2(.02f,.5f),new Vector2(.30f,.5f),new Vector2(.50f,.58f),new Vector2(.70f,.5f),new Vector2(.98f,.5f)},
