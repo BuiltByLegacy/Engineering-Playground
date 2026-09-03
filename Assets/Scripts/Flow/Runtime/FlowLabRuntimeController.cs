@@ -7,8 +7,8 @@ namespace EngineeringPlayground.Flow.Runtime
 {
     public sealed class FlowLabRuntimeController : MonoBehaviour
     {
-        [SerializeField] private int width = 96;
-        [SerializeField] private int height = 54;
+        [SerializeField] private int width = 160;
+        [SerializeField] private int height = 90;
         [SerializeField] private double relaxationOmega = 1.82;
         [SerializeField] private double inletVelocity = 0.05;
         [SerializeField] private int solverIterationsPerFrame = 2;
