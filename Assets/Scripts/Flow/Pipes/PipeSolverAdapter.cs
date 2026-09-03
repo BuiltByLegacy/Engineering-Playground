@@ -13,15 +13,14 @@ namespace EngineeringPlayground.Flow.Pipes
             var highH = solver.Height * Supersample;
             var fluidHi = new bool[highW * highH];
 
-            // Rasterize the continuous centerline at higher resolution first. Downsampling by
-            // coverage gives the LBM mask a much smoother inner wall than drawing directly onto
-            // coarse lattice cells.
             const int samples = 720;
-            var rx = path.Radius * (highW - 1);
-            var ry = path.Radius * (highH - 1);
             for (var s=0;s<=samples;s++)
             {
-                var p = path.Sample(s/(float)samples);
+                var t=s/(float)samples;
+                var p = path.Sample(t);
+                var radius=path.RadiusAt(t);
+                var rx = radius * (highW - 1);
+                var ry = radius * (highH - 1);
                 var cx = p.x * (highW - 1); var cy = p.y * (highH - 1);
                 var minX = Mathf.Max(0, Mathf.FloorToInt(cx-rx-1)); var maxX = Mathf.Min(highW-1, Mathf.CeilToInt(cx+rx+1));
                 var minY = Mathf.Max(0, Mathf.FloorToInt(cy-ry-1)); var maxY = Mathf.Min(highH-1, Mathf.CeilToInt(cy+ry+1));
@@ -42,8 +41,6 @@ namespace EngineeringPlayground.Flow.Pipes
                 mask[y*solver.Width+x] = fluidSamples < threshold;
             }
 
-            // Keep top/bottom domain edges solid. The pipe itself may reach the inlet/outlet columns;
-            // D2Q9 boundary conditions only operate where the generated passage is actually open.
             for(var x=0;x<solver.Width;x++){mask[x]=true;mask[(solver.Height-1)*solver.Width+x]=true;}
             return mask;
         }
