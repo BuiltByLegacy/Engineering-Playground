@@ -32,9 +32,10 @@ namespace EngineeringPlayground.Flow.Challenges
             result.DimensionScores.TryGetValue("flow",out var flow);result.DimensionScores.TryGetValue("pressure",out var pressure);result.DimensionScores.TryGetValue("turbulence",out var smoothness);result.DimensionScores.TryGetValue("material",out var material);
             var values=new[]{flow,pressure,smoothness,material};if(_metrics!=null)for(var i=0;i<_metrics.Length&&i<values.Length;i++)_metrics[i]?.SetValue(values[i]);
             if(_result==null)return;
-            var recommendation=result.Feedback!=null&&result.Feedback.Count>1?result.Feedback[1]:"Keep iterating on the weakest part of the design.";
             var status=result.Passed?"LEVEL PASSED":"KEEP TUNING";
-            _result.text=$"{status}   {result.Score:F0}   ·   GRADE {result.Grade}   ·   {Stars(result.Stars)}\n\n{recommendation}";
+            var compare=_session.GetComparisonSummary();
+            var insight=string.IsNullOrWhiteSpace(_session.PrimaryInsight)?"Make one deliberate change and compare the next run.":_session.PrimaryInsight;
+            _result.text=$"{status}   {result.Score:F0}   ·   GRADE {result.Grade}   ·   {Stars(result.Stars)}\n\n{compare}\n{insight}";
         }
 
         private static string Stars(int count)=>count switch{3=>"★ ★ ★",2=>"★ ★ ☆",1=>"★ ☆ ☆",_=>"☆ ☆ ☆"};
