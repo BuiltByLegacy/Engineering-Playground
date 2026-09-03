@@ -22,6 +22,10 @@ namespace EngineeringPlayground.Flow.Challenges
         public ChallengeDefinition CurrentChallenge => _ordered.Count == 0 ? null : _ordered[_index].challenge;
         public ChapterDefinition CurrentChapter => _ordered.Count == 0 ? null : _ordered[_index].chapter;
         public FlowChallengeResult LastResult { get; private set; }
+        public FlowRunSnapshot? PreviousRun { get; private set; }
+        public FlowRunSnapshot? LastRun { get; private set; }
+        public FlowRunComparison LastComparison { get; private set; }
+        public string PrimaryInsight { get; private set; } = string.Empty;
         public int CurrentIndex => _index;
         public int ChallengeCount => _ordered.Count;
         public PlayerProgressStore Progress => _progress;
@@ -71,6 +75,21 @@ namespace EngineeringPlayground.Flow.Challenges
                 : Math.Max(0,CountSolidCells()-_baselineSolidCells);
             var metrics=new FlowChallengeMetrics(solver.MeanOutletSpeed(),pressureLoss,solver.MeanAbsoluteVorticity(),material);
             LastResult=FlowChallengeScorer.Evaluate(CurrentChallenge,metrics);
+
+            if(IsPipeChallenge)
+            {
+                var snapshot=FlowRunAnalyzer.Capture(metrics,flowController.PipePath,LastResult);
+                PreviousRun=LastRun;
+                LastRun=snapshot;
+                LastComparison=PreviousRun.HasValue?FlowRunAnalyzer.Compare(PreviousRun.Value,snapshot):null;
+                PrimaryInsight=FlowEngineeringInsightEngine.Explain(snapshot,LastComparison);
+            }
+            else
+            {
+                PreviousRun=null;LastRun=null;LastComparison=null;
+                PrimaryInsight=LastResult.Feedback.Count>1?LastResult.Feedback[1]:string.Empty;
+            }
+
             if(LastResult.Passed)_progress.RecordChallengeResult(CurrentChallenge.ChallengeId,LastResult.Score,LastResult.Grade,LastResult.Stars,CurrentChallenge.ConceptUnlocks);
             ChallengeScored?.Invoke(LastResult);return LastResult;
         }
@@ -82,10 +101,11 @@ namespace EngineeringPlayground.Flow.Challenges
         }
         public string GetProgressSummary(){if(CurrentChallenge==null)return string.Empty;var p=_progress.GetChallenge(CurrentChallenge.ChallengeId);return $"Stars {p.Stars}/3  ·  Best {p.BestScore:F1} {p.BestGrade}  ·  Total stars {_progress.TotalStars()}";}
         public string GetNextGateMessage(){if(_index+1>=_ordered.Count)return "Campaign complete.";if(CurrentChallenge!=null&&!_progress.GetChallenge(CurrentChallenge.ChallengeId).Completed)return "Pass this level to unlock NEXT.";var next=_ordered[_index+1].chapter;return IsChapterUnlocked(next)?string.Empty:$"Chapter {next.ChapterNumber} unlocks at {next.UnlockStars} stars ({_progress.TotalStars()} earned).";}
+        public string GetComparisonSummary()=>LastComparison?.Summary??"First run recorded. Change one thing and compare.";
 
         private int FindFirstPlayableIndex(){var first=_ordered.FindIndex(item=>IsChapterUnlocked(item.chapter)&&!_progress.GetChallenge(item.challenge.ChallengeId).Completed);if(first>=0)return first;for(var i=_ordered.Count-1;i>=0;i--)if(IsChapterUnlocked(_ordered[i].chapter))return i;return 0;}
         private bool IsChapterUnlocked(ChapterDefinition chapter)=>chapter.ChapterNumber<=1||_progress.TotalStars()>=chapter.UnlockStars;
-        private void ApplyCurrentChallenge(){LastResult=null;ApplyStartingState();_baselineSolidCells=CountSolidCells();_baselineRouteLength=flowController?.PipePath?.RouteLength??0;ChallengeChanged?.Invoke();}
+        private void ApplyCurrentChallenge(){LastResult=null;PreviousRun=null;LastRun=null;LastComparison=null;PrimaryInsight=string.Empty;ApplyStartingState();_baselineSolidCells=CountSolidCells();_baselineRouteLength=flowController?.PipePath?.RouteLength??0;ChallengeChanged?.Invoke();}
 
         private void ApplyStartingState()
         {
