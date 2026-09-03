@@ -50,6 +50,9 @@ namespace EngineeringPlayground.App
             var handlesObject=new GameObject("Pipe Route Handles",typeof(RectTransform),typeof(CanvasRenderer),typeof(PipeHandleOverlay));handlesObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(handlesObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var pipeHandles=handlesObject.GetComponent<PipeHandleOverlay>();pipeHandles.Configure(controller);
 
+            var diameterHandlesObject=new GameObject("Pipe Diameter Handles",typeof(RectTransform),typeof(CanvasRenderer),typeof(PipeDiameterHandleOverlay));diameterHandlesObject.transform.SetParent(workspaceObject.transform,false);
+            ProductionUIFactory.Stretch(diameterHandlesObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var pipeDiameterHandles=diameterHandlesObject.GetComponent<PipeDiameterHandleOverlay>();pipeDiameterHandles.Configure(controller,challengeSession);
+
             var overlayObject=new GameObject("Showcase Packaging Overlay",typeof(RectTransform),typeof(ShowcasePackagingOverlay));overlayObject.transform.SetParent(workspaceObject.transform,false);
             ProductionUIFactory.Stretch(overlayObject.GetComponent<RectTransform>(),Vector2.zero,Vector2.one);var showcaseOverlay=overlayObject.GetComponent<ShowcasePackagingOverlay>();showcaseOverlay.Configure(showcaseSession);showcaseOverlay.SetVisible(false);
 
@@ -62,7 +65,7 @@ namespace EngineeringPlayground.App
             hintPanel.AddComponent<CanvasGroup>();hintPanel.AddComponent<ProductionToast>();
             var hint=ProductionUIFactory.Text(hintPanel.transform,"Hint",new Vector2(.04f,.08f),new Vector2(.96f,.92f),15,TextAnchor.MiddleLeft,EngineeringPlaygroundTheme.Text,FontStyle.Bold);
 
-            var resultCard=ProductionUIFactory.Panel(canvasObject.transform,"Result Sheet",new Vector2(.15f,.16f),new Vector2(.85f,.55f),new Color32(10,22,34,252),EngineeringPlaygroundTheme.RadiusLarge);
+            var resultCard=ProductionUIFactory.Panel(canvasObject.transform,"Result Sheet",new Vector2(.15f,.14f),new Vector2(.85f,.58f),new Color32(10,22,34,252),EngineeringPlaygroundTheme.RadiusLarge);
             resultCard.AddComponent<CanvasGroup>();resultCard.AddComponent<ProductionResultSheet>();
             var result=ProductionUIFactory.Text(resultCard.transform,"Result",new Vector2(.055f,.60f),new Vector2(.945f,.93f),21,TextAnchor.UpperLeft,EngineeringPlaygroundTheme.Text);
             var metricNames=new[]{"Flow","Pressure","Smoothness","Material"};var metrics=new ProductionMetricRow[4];
@@ -90,7 +93,7 @@ namespace EngineeringPlayground.App
             var prevButton=ProductionUIFactory.IconButton(actionRail.transform,ProductionIconGraphic.Icon.Undo,modeController.Previous,72f);prevButton.gameObject.SetActive(false);
 
             var play=root.AddComponent<FlowChallengePlayController>();play.Configure(controller,challengeSession);
-            var experience=root.AddComponent<FlowChallengeExperience>();experience.Configure(play,challengeSession,editor,pipeHandles,toolDock,resultCard,hint,primaryButton,primaryLabel,nextButton);
+            var experience=root.AddComponent<FlowChallengeExperience>();experience.Configure(play,challengeSession,editor,pipeHandles,pipeDiameterHandles,toolDock,resultCard,hint,primaryButton,primaryLabel,nextButton);
 
             primaryButton.onClick.RemoveAllListeners();primaryButton.onClick.AddListener(()=>{if(modeController.Mode==FlowLabMode.Challenge)experience.PrimaryAction();else modeController.ToggleRunning();});
             nextButton.onClick.RemoveAllListeners();nextButton.onClick.AddListener(()=>{if(modeController.Mode==FlowLabMode.Challenge)experience.Next();else modeController.Next();});
